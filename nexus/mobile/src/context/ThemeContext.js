@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { themes, typography, spacing, radius, shadow } from '../theme';
+import { secureStorage } from '../utils/secureStorage';
 import { TOKEN_KEYS } from '../constants/config';
 
 const ThemeCtx = createContext(null);
@@ -12,7 +12,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     (async () => {
-      const stored = await SecureStore.getItemAsync(TOKEN_KEYS.THEME);
+      const stored = await secureStorage.getItem(TOKEN_KEYS.THEME);
       if (stored) setMode(stored);
     })();
   }, []);
@@ -31,7 +31,7 @@ export function ThemeProvider({ children }) {
       shadow,
       setMode: async (m) => {
         setMode(m);
-        await SecureStore.setItemAsync(TOKEN_KEYS.THEME, m);
+        await secureStorage.setItem(TOKEN_KEYS.THEME, m);
       },
     }),
     [mode, effective, colors]

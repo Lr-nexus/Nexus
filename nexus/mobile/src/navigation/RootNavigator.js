@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as SecureStore from 'expo-secure-store';
 
 import AuthNavigator from './AuthNavigator';
 import MainTabNavigator from './MainTabNavigator';
@@ -9,6 +8,7 @@ import { Screens } from './screens';
 import { stackScreenOptions, modalScreenOptions } from './stackOptions';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { secureStorage } from '../utils/secureStorage';
 import { TOKEN_KEYS } from '../constants/config';
 import { ROUTES } from '../constants/routes';
 
@@ -21,8 +21,8 @@ export default function RootNavigator() {
   useEffect(() => {
     (async () => {
       try {
-        const seen = await SecureStore.getItemAsync(TOKEN_KEYS.ONBOARDED);
-        if (!seen) await SecureStore.setItemAsync(TOKEN_KEYS.ONBOARDED, '1');
+        const seen = await secureStorage.getItem(TOKEN_KEYS.ONBOARDED);
+        if (!seen) await secureStorage.setItem(TOKEN_KEYS.ONBOARDED, '1');
       } catch {}
     })();
   }, []);
