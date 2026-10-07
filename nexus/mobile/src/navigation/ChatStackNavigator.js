@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Screens } from './screens';
-import { stackScreenOptions } from './stackOptions';
+import { stackScreenOptions, modalScreenOptions } from './stackOptions';
 import { ROUTES } from '../constants/routes';
 
 const Stack = createNativeStackNavigator();
@@ -15,6 +15,8 @@ export default function ChatStackNavigator() {
       <Stack.Screen name={ROUTES.CHAT_INFO} component={Screens.ChatInfo} />
       <Stack.Screen name={ROUTES.CALL} component={Screens.Call} />
       <Stack.Screen name={ROUTES.CALL_HISTORY} component={Screens.CallHistory} />
+      <Stack.Screen name={ROUTES.POST_DETAIL} component={Screens.PostDetail} />
+      <Stack.Screen name={ROUTES.USER_PROFILE} component={Screens.UserProfile} />
     </Stack.Navigator>
   );
 }

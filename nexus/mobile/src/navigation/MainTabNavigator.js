@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -16,25 +17,11 @@ function EmptyCreateScreen() {
   return <View />;
 }
 
-function TabIcon({ emoji, focused, color }) {
-  return (
-    <Text
-      style={{
-        fontSize: focused ? 24 : 22,
-        opacity: focused ? 1 : 0.65,
-        color,
-        includeFontPadding: false,
-      }}
-    >
-      {emoji}
-    </Text>
-  );
-}
-
 function CreateTabButton({ onPress }) {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity onPress={onPress} style={styles.createBtn} activeOpacity={0.85}>
-      <Text style={styles.createIcon}>＋</Text>
+    <TouchableOpacity onPress={onPress} style={[styles.createBtn, { backgroundColor: colors.nexusBlue }]} activeOpacity={0.85}>
+      <Ionicons name="add" size={30} color="#fff" />
     </TouchableOpacity>
   );
 }
@@ -43,7 +30,6 @@ export default function MainTabNavigator({ navigation }) {
   const { colors } = useTheme();
   const { unread } = useNotifications();
   const insets = useSafeAreaInsets();
-
   const tabBarHeight = 56 + Math.max(insets.bottom, 8);
 
   return (
@@ -61,15 +47,16 @@ export default function MainTabNavigator({ navigation }) {
         tabBarActiveTintColor: colors.electricBlue,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
-        tabBarItemStyle: { paddingVertical: 2 },
       }}
-     >
+    >
       <Tabs.Screen
         name="HomeTab"
         component={HomeStackNavigator}
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused, color }) => <TabIcon emoji="🏠" focused={focused} color={color} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -79,7 +66,9 @@ export default function MainTabNavigator({ navigation }) {
           title: 'Chats',
           tabBarBadge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 10 },
-          tabBarIcon: ({ focused, color }) => <TabIcon emoji="💬" focused={focused} color={color} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -103,7 +92,9 @@ export default function MainTabNavigator({ navigation }) {
         component={RizzStackNavigator}
         options={{
           title: 'Rizz AI',
-          tabBarIcon: ({ focused, color }) => <TabIcon emoji="🔥" focused={focused} color={color} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'flame' : 'flame-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -111,7 +102,9 @@ export default function MainTabNavigator({ navigation }) {
         component={ProfileStackNavigator}
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused, color }) => <TabIcon emoji="👤" focused={focused} color={color} />,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+          ),
         }}
       />
     </Tabs.Navigator>
@@ -124,7 +117,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#2563EB',
@@ -133,5 +125,4 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 8,
   },
-  createIcon: { color: '#fff', fontSize: 30, fontWeight: '300', marginTop: -2, includeFontPadding: false },
 });

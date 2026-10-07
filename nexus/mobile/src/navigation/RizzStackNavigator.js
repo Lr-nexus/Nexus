@@ -15,6 +15,8 @@ export default function RizzStackNavigator() {
       <Stack.Screen name={ROUTES.RIZZ_SAVED} component={Screens.RizzSaved} />
       <Stack.Screen name={ROUTES.RIZZ_SETTINGS} component={Screens.RizzSettings} />
       <Stack.Screen name={ROUTES.RIZZ_SCREENSHOT} component={Screens.RizzScreenshot} />
+      <Stack.Screen name={ROUTES.POST_DETAIL} component={Screens.PostDetail} />
+      <Stack.Screen name={ROUTES.USER_PROFILE} component={Screens.UserProfile} />
     </Stack.Navigator>
   );
 }

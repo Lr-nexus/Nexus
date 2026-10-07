@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View, Text, FlatList, RefreshControl, StyleSheet, ScrollView,
 } from 'react-native';
@@ -90,14 +91,14 @@ export default function HomeScreen() {
         subtitle="Connect. Chat. Share. Discover."
         rightIcons={[
           {
-            icon: <Text style={{ fontSize: 20 }}>🔔</Text>,
+            icon: <Ionicons name="notifications-outline" size={22} color={colors.text} />,
             onPress: () => navigation.navigate(ROUTES.NOTIFICATIONS),
           },
           {
-            icon: <Text style={{ fontSize: 20 }}>🔎</Text>,
+            icon: <Ionicons name="search-outline" size={22} color={colors.text} />,
             onPress: () => navigation.navigate(ROUTES.SEARCH),
           },
-        ]}
+    ]}
       />
 
       {loading ? (

@@ -14,6 +14,7 @@ export default function ProfileStackNavigator() {
       <Stack.Screen name={ROUTES.EDIT_PROFILE} component={Screens.EditProfile} />
       <Stack.Screen name={ROUTES.FOLLOWERS} component={Screens.Followers} />
       <Stack.Screen name={ROUTES.FOLLOWING} component={Screens.Following} />
+      <Stack.Screen name={ROUTES.POST_DETAIL} component={Screens.PostDetail} />
       <Stack.Screen name={ROUTES.SETTINGS} component={Screens.Settings} />
       <Stack.Screen name={ROUTES.PRIVACY_SETTINGS} component={Screens.PrivacySettings} />
       <Stack.Screen name={ROUTES.NOTIFICATION_SETTINGS} component={Screens.NotificationSettings} />

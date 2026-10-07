@@ -1,7 +1,8 @@
 import React, { forwardRef, useState } from 'react';
 import {
-  View, TextInput, TouchableOpacity, Text, StyleSheet, Platform,
+  View, TextInput, TouchableOpacity, StyleSheet, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
 const ChatInput = forwardRef(function ChatInput(
@@ -32,11 +33,11 @@ const ChatInput = forwardRef(function ChatInput(
       ]}
     >
       <TouchableOpacity onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
-        <Text style={{ fontSize: 22 }}>＋</Text>
+        <Ionicons name="add-circle-outline" size={26} color={colors.text} />
       </TouchableOpacity>
 
       <TouchableOpacity onPress={onRizz} hitSlop={8} style={styles.iconBtn}>
-        <Text style={{ fontSize: 20 }}>🔥</Text>
+        <Ionicons name="flame" size={22} color="#EF4444" />
       </TouchableOpacity>
 
       <TextInput
@@ -63,14 +64,14 @@ const ChatInput = forwardRef(function ChatInput(
           disabled={!canSend}
           style={[styles.sendBtn, { backgroundColor: colors.nexusBlue, borderRadius: radius.pill }]}
         >
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>↑</Text>
+          <Ionicons name="arrow-up" size={20} color="#fff" />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           onPress={onVoicePress}
           style={[styles.sendBtn, { backgroundColor: colors.card, borderRadius: radius.pill }]}
         >
-          <Text style={{ fontSize: 18 }}>🎙️</Text>
+          <Ionicons name="mic-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       )}
     </View>

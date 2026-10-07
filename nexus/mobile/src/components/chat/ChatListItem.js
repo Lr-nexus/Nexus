@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../common/Avatar';
-import Badge from '../common/Badge';
 import { useTheme } from '../../context/ThemeContext';
 import { formatDate } from '../../utils/formatDate';
 
@@ -14,7 +14,10 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
       ? item.name || 'Group chat'
       : others[0]?.fullName || others[0]?.username || 'Chat';
 
-  const avatarUser = item.type === 'group' ? { fullName: title, profilePicture: item.photo } : others[0] || {};
+  const avatarUser =
+    item.type === 'group'
+      ? { fullName: title, profilePicture: item.photo }
+      : others[0] || {};
 
   const lastMsg = item.lastMessage;
   const preview = lastMsg?.content
@@ -48,16 +51,14 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
 
       <View style={{ flex: 1, marginLeft: 12 }}>
         <View style={styles.line}>
-          <Text
-            numberOfLines={1}
-            style={[styles.name, { color: colors.text }]}
-          >
+          <Text numberOfLines={1} style={[styles.name, { color: colors.text }]}>
             {title}
           </Text>
           <Text style={[styles.time, { color: colors.textDim }]}>
             {item.lastMessageAt ? formatDate(item.lastMessageAt) : ''}
           </Text>
         </View>
+
         <View style={styles.line}>
           <Text
             numberOfLines={1}
@@ -67,14 +68,13 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
           </Text>
           {unread > 0 ? (
             <View
-              style={[
-                styles.unreadPill,
-                { backgroundColor: colors.nexusBlue },
-              ]}
+              style={[styles.unreadPill, { backgroundColor: colors.nexusBlue }]}
             >
               <Text style={styles.unreadTxt}>{unread > 99 ? '99+' : unread}</Text>
             </View>
-          ) : null}
+          ) : (
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -83,7 +83,11 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   name: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
   time: { fontSize: 11 },
   preview: { fontSize: 13, marginTop: 2 },

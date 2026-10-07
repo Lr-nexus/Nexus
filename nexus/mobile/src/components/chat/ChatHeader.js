@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../common/Avatar';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -42,7 +43,7 @@ export default function ChatHeader({ conversation, currentUserId, onBack, onCall
         ]}
       >
         <TouchableOpacity onPress={onBack} hitSlop={12} style={styles.iconBtn}>
-          <Text style={{ color: colors.text, fontSize: 24, lineHeight: 24 }}>‹</Text>
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.userRow} onPress={onInfo} activeOpacity={0.7}>
@@ -58,10 +59,10 @@ export default function ChatHeader({ conversation, currentUserId, onBack, onCall
         </TouchableOpacity>
 
         <TouchableOpacity onPress={onCall} hitSlop={10} style={styles.iconBtn}>
-          <Text style={{ fontSize: 20 }}>📞</Text>
+          <Ionicons name="call-outline" size={22} color={colors.text} />
         </TouchableOpacity>
         <TouchableOpacity onPress={onVideo} hitSlop={10} style={styles.iconBtn}>
-          <Text style={{ fontSize: 20 }}>🎥</Text>
+          <Ionicons name="videocam-outline" size={22} color={colors.text} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -69,11 +70,7 @@ export default function ChatHeader({ conversation, currentUserId, onBack, onCall
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   userRow: { flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: 4 },
   title: { fontSize: 15, fontWeight: '700' },
