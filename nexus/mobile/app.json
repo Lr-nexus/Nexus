@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Nova",
+    "slug": "nova",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "nova",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#080B18",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexus.nova",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Nova uses the camera to take photos and videos.",
+        "NSMicrophoneUsageDescription": "Nova uses the microphone for voice messages and calls.",
+        "NSPhotoLibraryUsageDescription": "Nova needs access to your photos to share them.",
+        "NSLocationWhenInUseUsageDescription": "Nova shares your location only when you choose to."
+      }
+    },
+    "android": {
+      "package": "com.nexus.nova",
+      "adaptiveIcon": {
+        "backgroundColor": "#080B18"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nova needs access to your photos."
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}
