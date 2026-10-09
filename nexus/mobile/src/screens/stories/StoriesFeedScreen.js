@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, ScrollView, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View, Text, FlatList, RefreshControl, StyleSheet, TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,7 +76,11 @@ export default function StoriesFeedScreen() {
           numColumns={2}
           contentContainerStyle={{ padding: spacing.sm }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.electricBlue} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); load(); }}
+              tintColor={colors.electricBlue}
+            />
           }
           renderItem={({ item, index }) => (
             <TouchableOpacity
@@ -83,21 +89,34 @@ export default function StoriesFeedScreen() {
               style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               {item.media?.url ? (
-                <View style={styles.cardMedia}>
-                  <Text style={{ color: colors.textMuted, fontSize: 12, textAlign: 'center' }}>
-                    {item.type === 'video' ? '🎬' : '🖼️'}
-                  </Text>
+                <View style={[styles.cardMedia, { backgroundColor: colors.card }]}>
+                  <Ionicons
+                    name={item.type === 'video' ? 'videocam' : 'image'}
+                    size={28}
+                    color={colors.textMuted}
+                  />
                 </View>
               ) : (
-                <View style={[styles.cardMedia, { backgroundColor: item.textStyle?.background || colors.nexusBlue }]}>
-                  <Text numberOfLines={4} style={{ color: '#fff', fontWeight: '700', padding: 8, textAlign: 'center' }}>
+                <View
+                  style={[
+                    styles.cardMedia,
+                    { backgroundColor: item.textStyle?.background || colors.nexusBlue },
+                  ]}
+                >
+                  <Text
+                    numberOfLines={4}
+                    style={{ color: '#fff', fontWeight: '700', padding: 8, textAlign: 'center' }}
+                  >
                     {item.text}
                   </Text>
                 </View>
               )}
               <View style={styles.cardFooter}>
                 <Avatar uri={item.authorId?.profilePicture} name={item.authorId?.fullName} size={26} />
-                <Text numberOfLines={1} style={{ color: colors.text, fontSize: 12, fontWeight: '700', marginLeft: 6, flex: 1 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: colors.text, fontSize: 12, fontWeight: '700', marginLeft: 6, flex: 1 }}
+                >
                   @{item.authorId?.username || 'user'}
                 </Text>
                 <Text style={{ color: colors.textDim, fontSize: 10 }}>
@@ -116,21 +135,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 17, fontWeight: '800' },
-  card: {
-    flex: 1,
-    margin: 6,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
-  cardMedia: {
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-  },
+  card: { flex: 1, margin: 6, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+  cardMedia: { height: 180, alignItems: 'center', justifyContent: 'center' },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', padding: 8 },
 });

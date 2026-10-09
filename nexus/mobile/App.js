@@ -37,11 +37,11 @@ function ThemedNavigation() {
   if (locked) return <LockScreen />;
 
   return (
-    <NavigationContainer theme={navTheme}>
-      <OfflineBanner />
-      <RootNavigator />
-      <StatusBar style={effective === 'dark' ? 'light' : 'dark'} />
-    </NavigationContainer>
+    <NavigationContainer theme={navTheme} navigationInChildEnabled>
+  <OfflineBanner />
+  <RootNavigator />
+  <StatusBar style={effective === 'dark' ? 'light' : 'dark'} />
+</NavigationContainer>
   );
 }
 

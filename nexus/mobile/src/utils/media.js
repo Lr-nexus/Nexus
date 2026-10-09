@@ -1,7 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
-// SDK 57+ uses `mediaTypes: ['images']` / `['videos']` strings.
-// Older SDKs used ImagePicker.MediaTypeOptions.Images — we handle both.
 const IMAGES = 'images';
 const VIDEOS = 'videos';
 
@@ -46,4 +45,21 @@ export async function pickMultipleImages({ selectionLimit = 10 } = {}) {
   });
   if (res.canceled) return [];
   return res.assets;
+}
+
+export async function pickDocument() {
+  const res = await DocumentPicker.getDocumentAsync({
+    type: '*/*',
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+  if (res.canceled) return null;
+  const f = res.assets?.[0];
+  if (!f) return null;
+  return {
+    uri: f.uri,
+    name: f.name,
+    size: f.size,
+    mimeType: f.mimeType || 'application/octet-stream',
+  };
 }

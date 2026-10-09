@@ -5,30 +5,38 @@ import { secureStorage } from '../utils/secureStorage';
 
 let socket = null;
 
+// Minimal atob polyfill for Hermes
+if (typeof global.atob === 'undefined') {
+  global.atob = (str) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let output = '';
+    str = String(str).replace(/=+$/, '');
+    for (let bc = 0, bs, buffer, i = 0; (buffer = str.charAt(i++)); ) {
+      buffer = chars.indexOf(buffer);
+      if (~buffer) {
+        bs = bc % 4 ? bs * 64 + buffer : buffer;
+        if (bc++ % 4) output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6)));
+      }
+    }
+    return output;
+  };
+}
+
 async function getFreshToken() {
   let token = await secureStorage.getItem(TOKEN_KEYS.ACCESS);
   if (!token) return null;
-
-  // Check if token is expired or about to expire in the next 30 seconds
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiresAt = payload.exp * 1000;
-    const secondsUntilExpiry = (expiresAt - Date.now()) / 1000;
-
-    if (secondsUntilExpiry < 30) {
-      // Refresh proactively
+    const payload = JSON.parse(global.atob(token.split('.')[1]));
+    const secondsLeft = (payload.exp * 1000 - Date.now()) / 1000;
+    if (secondsLeft < 30) {
       const refreshToken = await secureStorage.getItem(TOKEN_KEYS.REFRESH);
       if (!refreshToken) return null;
-
       const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
       await secureStorage.setItem(TOKEN_KEYS.ACCESS, data.accessToken);
       await secureStorage.setItem(TOKEN_KEYS.REFRESH, data.refreshToken);
       return data.accessToken;
     }
-  } catch (e) {
-    console.warn('[socket] token parse/refresh failed:', e?.message);
-  }
-
+  } catch {}
   return token;
 }
 
@@ -38,7 +46,6 @@ export async function connectSocket() {
   const token = await getFreshToken();
   if (!token) return null;
 
-  // Tear down old socket if present
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();
@@ -46,25 +53,19 @@ export async function connectSocket() {
   }
 
   socket = io(SOCKET_URL, {
-    transports: ['websocket'],
+    // No `transports` restriction — allows polling fallback if WS is blocked
     auth: { token },
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1500,
-    // Refresh the token on every reconnect attempt
-    authCallback: async (cb) => {
-      const fresh = await getFreshToken();
-      cb({ token: fresh });
-    },
+    timeout: 20000,
   });
 
   socket.on('connect_error', async (err) => {
     console.warn('[socket] connect_error:', err?.message);
-    // If auth failed, refresh and retry once
-    if (String(err?.message || '').toLowerCase().includes('unauthorized') ||
-        String(err?.message || '').toLowerCase().includes('expired') ||
-        String(err?.message || '').toLowerCase().includes('no auth token')) {
+    const m = String(err?.message || '').toLowerCase();
+    if (m.includes('unauthorized') || m.includes('expired') || m.includes('auth')) {
       const fresh = await getFreshToken();
       if (fresh) {
         socket.auth = { token: fresh };
@@ -76,9 +77,7 @@ export async function connectSocket() {
   return socket;
 }
 
-export function getSocket() {
-  return socket;
-}
+export function getSocket() { return socket; }
 
 export function disconnectSocket() {
   if (socket) {

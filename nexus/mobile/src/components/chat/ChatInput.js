@@ -1,6 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 import {
-  View, TextInput, TouchableOpacity, Text, StyleSheet, Platform,
+  View, TextInput, TouchableOpacity, StyleSheet, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -65,13 +65,20 @@ const ChatInput = forwardRef(function ChatInput(
           onPress={send}
           disabled={!canSend}
           style={[styles.sendBtn, { backgroundColor: colors.teal, borderRadius: radius.pill }]}
+          activeOpacity={0.85}
         >
-          <Ionicons name="arrow-up" size={20} color="#fff" />
+          <Ionicons
+            name="arrow-up"
+            size={22}
+            color="#fff"
+            style={styles.sendIcon}
+          />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           onPress={onVoicePress}
           style={[styles.sendBtn, { backgroundColor: colors.surface, borderRadius: radius.pill }]}
+          activeOpacity={0.85}
         >
           <Ionicons name="mic-outline" size={20} color={colors.text} />
         </TouchableOpacity>
@@ -100,7 +107,19 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'ios' ? 12 : 8,
     fontSize: 15,
     maxHeight: 120,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   rizzBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  sendBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendIcon: {
+    // Small nudge to visually center the arrow inside the circle
+    marginTop: 1,
+    includeFontPadding: false,
+  },
 });

@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, RefreshControl, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { conversationsApi } from '../../api/conversations.api';
@@ -36,16 +37,7 @@ export default function ChatsListScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -53,7 +45,11 @@ export default function ChatsListScreen() {
         title="Chats"
         rightIcons={[
           {
-            icon: <Text style={{ fontSize: 22 }}>✎</Text>,
+            icon: <Ionicons name="search-outline" size={22} color={colors.text} />,
+            onPress: () => navigation.navigate(ROUTES.SEARCH),
+          },
+          {
+            icon: <Ionicons name="create-outline" size={22} color={colors.text} />,
             onPress: () => navigation.navigate(ROUTES.NEW_CHAT),
           },
         ]}
@@ -86,7 +82,11 @@ export default function ChatsListScreen() {
             />
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.electricBlue} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); load(); }}
+              tintColor={colors.electricBlue}
+            />
           }
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}

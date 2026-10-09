@@ -75,18 +75,22 @@ export default function Button({
         <ActivityIndicator color={color} />
       ) : (
         <View style={styles.row}>
-          {icon ? <View style={{ marginRight: 8 }}>{icon}</View> : null}
+          {icon ? <View style={styles.iconLeft}>{icon}</View> : null}
           <Text
             numberOfLines={1}
             style={[
               styles.txt,
-              { color, fontSize: fontScale(fontSizeMap[size]) },
+              {
+                color,
+                fontSize: fontScale(fontSizeMap[size]),
+                lineHeight: fontScale(fontSizeMap[size]) + 2,
+              },
               textStyle,
             ]}
           >
             {title}
           </Text>
-          {iconRight ? <View style={{ marginLeft: 8 }}>{iconRight}</View> : null}
+          {iconRight ? <View style={styles.iconRight}>{iconRight}</View> : null}
         </View>
       )}
     </TouchableOpacity>
@@ -100,6 +104,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
   },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  txt: { fontWeight: '700', letterSpacing: 0.2 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  txt: {
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    textAlign: 'center',
+  },
+  iconLeft: { marginRight: 8, justifyContent: 'center', alignItems: 'center' },
+  iconRight: { marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
 });

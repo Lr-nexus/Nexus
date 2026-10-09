@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, KeyboardAvoidingView, Platform,
-  Alert, ActivityIndicator, TouchableOpacity, Keyboard,
+  Alert, ActivityIndicator, Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -18,10 +18,9 @@ import MessageActions from '../../components/chat/MessageActions';
 import VoiceRecorder from '../../components/chat/VoiceRecorder';
 import BottomSheet from '../../components/common/BottomSheet';
 import { ROUTES } from '../../constants/routes';
-import { pickImage, pickVideo } from '../../utils/media';
+import { pickImage, pickVideo, pickDocument } from '../../utils/media';
 
 function dedupeMessages(list) {
-  // Keep last occurrence per _id, preserving order
   const seen = new Map();
   const result = [];
   for (const m of list) {
@@ -83,37 +82,24 @@ export default function ChatScreen({ route }) {
     return () => emit('conversation:leave', conversation._id);
   }, [conversation, emit]);
 
-  // Socket listeners
   useEffect(() => {
     if (!conversation?._id) return;
 
     const offNew = on('message:new', (m) => {
       if (m.conversationId !== conversation._id) return;
-
-      // Replace optimistic if same content from me, or skip if already seen
       setMessages((prev) => {
         let next;
         if (m.senderId === user?.id) {
-          const optimisticIdx = prev.findIndex(
-            (x) => x.__optimistic && x.content === m.content && x.type === m.type
-          );
-          if (optimisticIdx >= 0) {
-            next = [...prev];
-            next[optimisticIdx] = m;
-          } else if (!seenIdsRef.current.has(m._id)) {
-            next = [...prev, m];
-          } else {
-            return prev;
-          }
+          const idx = prev.findIndex((x) => x.__optimistic && x.content === m.content && x.type === m.type);
+          if (idx >= 0) { next = [...prev]; next[idx] = m; }
+          else if (!seenIdsRef.current.has(m._id)) next = [...prev, m];
+          else return prev;
         } else if (!seenIdsRef.current.has(m._id)) {
           next = [...prev, m];
-        } else {
-          return prev;
-        }
+        } else return prev;
         seenIdsRef.current.add(m._id);
         return dedupeMessages(next);
       });
-
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     });
 
@@ -129,66 +115,32 @@ export default function ChatScreen({ route }) {
       );
     });
 
-    const offRead = on('message:read', ({ messageId, userId }) => {
-      setMessages((prev) =>
-        dedupeMessages(
-          prev.map((m) =>
-            m._id === messageId
-              ? { ...m, readBy: [...new Set([...(m.readBy || []), userId])] }
-              : m
-          )
-        )
-      );
-    });
-
-    // Presence updates
     const offOnline = on('user:online', ({ userId }) => {
-      setConversation((c) => {
-        if (!c) return c;
-        return {
-          ...c,
-          participants: c.participants.map((p) =>
-            String(p._id) === String(userId) ? { ...p, isOnline: true } : p
-          ),
-        };
+      setConversation((c) => !c ? c : {
+        ...c,
+        participants: c.participants.map((p) =>
+          String(p._id) === String(userId) ? { ...p, isOnline: true } : p
+        ),
       });
     });
 
     const offOffline = on('user:offline', ({ userId }) => {
-      setConversation((c) => {
-        if (!c) return c;
-        return {
-          ...c,
-          participants: c.participants.map((p) =>
-            String(p._id) === String(userId) ? { ...p, isOnline: false } : p
-          ),
-        };
+      setConversation((c) => !c ? c : {
+        ...c,
+        participants: c.participants.map((p) =>
+          String(p._id) === String(userId) ? { ...p, isOnline: false } : p
+        ),
       });
     });
 
     return () => {
-      offNew?.();
-      offTyping?.();
-      offReaction?.();
-      offRead?.();
-      offOnline?.();
-      offOffline?.();
+      offNew?.(); offTyping?.(); offReaction?.(); offOnline?.(); offOffline?.();
     };
   }, [conversation, on, user?.id]);
-
-  const onInputTyping = useCallback(() => {
-    if (!conversation?._id) return;
-    emit('message:typing', { conversationId: conversation._id, isTyping: true });
-    clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      emit('message:typing', { conversationId: conversation._id, isTyping: false });
-    }, 1600);
-  }, [conversation, emit]);
 
   async function sendText(text) {
     if (!text.trim()) return;
     setSending(true);
-
     const optimistic = {
       _id: `tmp-${Date.now()}-${Math.random()}`,
       __optimistic: true,
@@ -202,25 +154,14 @@ export default function ChatScreen({ route }) {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 30);
 
     try {
-      const res = await conversationsApi.send(conversation._id, {
-        content: text,
-        type: 'text',
-      });
+      const res = await conversationsApi.send(conversation._id, { content: text, type: 'text' });
       seenIdsRef.current.add(res.message._id);
       setMessages((prev) =>
-        dedupeMessages(
-          prev.map((m) => (m._id === optimistic._id ? res.message : m))
-        )
+        dedupeMessages(prev.map((m) => (m._id === optimistic._id ? res.message : m)))
       );
-    } catch (e) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m._id === optimistic._id ? { ...m, __failed: true } : m
-        )
-      );
-    } finally {
-      setSending(false);
-    }
+    } catch {
+      setMessages((prev) => prev.map((m) => (m._id === optimistic._id ? { ...m, __failed: true } : m)));
+    } finally { setSending(false); }
   }
 
   async function sendMedia(kind) {
@@ -231,10 +172,9 @@ export default function ChatScreen({ route }) {
       if (!asset) return;
 
       setSending(true);
-      const up =
-        kind === 'image'
-          ? await uploadService.uploadImage(asset.uri)
-          : await uploadService.uploadVideo(asset.uri);
+      const up = kind === 'image'
+        ? await uploadService.uploadImage(asset.uri)
+        : await uploadService.uploadVideo(asset.uri);
 
       const res = await conversationsApi.send(conversation._id, {
         content: '',
@@ -246,12 +186,36 @@ export default function ChatScreen({ route }) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     } catch (e) {
       Alert.alert('Upload failed', e?.response?.data?.message || 'Try again.');
-    } finally {
-      setSending(false);
-    }
+    } finally { setSending(false); }
   }
 
-  async function sendVoice({ uri, durationSeconds }) {
+  async function sendDocument() {
+    try {
+      const doc = await pickDocument();
+      if (!doc) return;
+
+      setSending(true);
+      const up = await uploadService.uploadFile(doc.uri, doc.name, doc.mimeType);
+
+      const res = await conversationsApi.send(conversation._id, {
+        content: doc.name,
+        type: 'file',
+        media: {
+          url: up.url,
+          publicId: up.publicId,
+          mimeType: doc.mimeType,
+          name: doc.name,
+        },
+      });
+      seenIdsRef.current.add(res.message._id);
+      setMessages((prev) => dedupeMessages([...prev, res.message]));
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
+    } catch (e) {
+      Alert.alert('Upload failed', e?.response?.data?.message || 'Try again.');
+    } finally { setSending(false); }
+  }
+
+  async function sendVoice({ uri }) {
     try {
       setSending(true);
       const up = await uploadService.uploadAudio(uri);
@@ -265,60 +229,28 @@ export default function ChatScreen({ route }) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     } catch (e) {
       Alert.alert('Send failed', e?.response?.data?.message || 'Try again.');
-    } finally {
-      setSending(false);
-    }
+    } finally { setSending(false); }
   }
 
   function startCall(type) {
     const ids = (conversation?.participants || [])
       .map((p) => String(p._id))
       .filter((id) => id !== String(user?.id));
-
-    if (ids.length === 0) {
-      return Alert.alert('No participants to call.');
-    }
-
-    // Close keyboard first
+    if (ids.length === 0) return Alert.alert('No participants to call.');
     Keyboard.dismiss();
-
-    navigation.navigate(ROUTES.CALL, {
-      conversation,
-      type,
-      participantIds: ids,
-    });
+    navigation.navigate(ROUTES.CALL, { conversation, type, participantIds: ids });
   }
 
   async function handleMessageAction(kind, payload) {
     const m = actionsFor;
     if (!m) return;
     try {
-      if (kind === 'react') {
-        await messagesApi.react(m._id, payload);
-      } else if (kind === 'delete') {
+      if (kind === 'react') await messagesApi.react(m._id, payload);
+      else if (kind === 'delete') {
         await messagesApi.remove(m._id);
-        setMessages((prev) =>
-          prev.map((x) => (x._id === m._id ? { ...x, isDeleted: true, content: '' } : x))
-        );
-      } else if (kind === 'edit') {
-        Alert.prompt?.(
-          'Edit message',
-          '',
-          async (value) => {
-            if (!value) return;
-            const res = await messagesApi.edit(m._id, value);
-            setMessages((prev) =>
-              prev.map((x) => (x._id === m._id ? res.message : x))
-            );
-          },
-          'plain-text',
-          m.content || ''
-        );
+        setMessages((prev) => prev.map((x) => (x._id === m._id ? { ...x, isDeleted: true, content: '' } : x)));
       } else if (kind === 'copy') {
-        try {
-          const Clipboard = require('expo-clipboard');
-          await Clipboard.setStringAsync(m.content || '');
-        } catch {}
+        try { const C = require('expo-clipboard'); await C.setStringAsync(m.content || ''); } catch {}
       }
     } catch (e) {
       Alert.alert('Action failed', e?.response?.data?.message || 'Try again.');
@@ -338,10 +270,7 @@ export default function ChatScreen({ route }) {
       <ChatHeader
         conversation={conversation}
         currentUserId={user?.id}
-        onBack={() => {
-          Keyboard.dismiss();
-          navigation.goBack();
-        }}
+        onBack={() => { Keyboard.dismiss(); navigation.goBack(); }}
         onInfo={() => navigation.navigate(ROUTES.CHAT_INFO, { conversation })}
         onCall={() => startCall('audio')}
         onVideo={() => startCall('video')}
@@ -349,8 +278,9 @@ export default function ChatScreen({ route }) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
+        enabled
       >
         {loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -384,10 +314,13 @@ export default function ChatScreen({ route }) {
           onSend={sendText}
           onAttach={() => setAttachOpen(true)}
           onRizz={() =>
-            navigation.navigate(ROUTES.RIZZ_CHAT, {
-              mode: 'reply',
-              context: messages.slice(-3).map((m) => m.content).filter(Boolean).join('\n'),
-              conversationId: conversation._id,
+            navigation.navigate('RizzTab', {
+              screen: 'RizzChat',
+              params: {
+                mode: 'reply',
+                context: messages.slice(-3).map((m) => m.content).filter(Boolean).join('\n'),
+                conversationId: conversation._id,
+              },
             })
           }
           onVoicePress={() => setVoiceOpen(true)}
@@ -409,9 +342,9 @@ export default function ChatScreen({ route }) {
         items={[
           { label: '📷 Photo', onPress: () => sendMedia('image') },
           { label: '🎬 Video', onPress: () => sendMedia('video') },
-          { label: '📄 Document', onPress: () => Alert.alert('Documents', 'Coming soon.') },
-          { label: '📍 Location', onPress: () => Alert.alert('Location', 'Coming soon.') },
-          { label: '👤 Contact', onPress: () => Alert.alert('Contact', 'Coming soon.') },
+          { label: '📄 Document', onPress: sendDocument },
+          { label: '📍 Location', onPress: () => navigation.navigate(ROUTES.LOCATION_SHARE, { conversationId: conversation._id }) },
+          { label: '👤 Contact', onPress: () => navigation.navigate(ROUTES.CONTACT_PICKER, { conversationId: conversation._id }) },
           { label: '🎙️ Voice message', onPress: () => setVoiceOpen(true) },
         ]}
       />

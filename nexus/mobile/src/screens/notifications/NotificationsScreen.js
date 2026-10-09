@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useNotifications } from '../../context/NotificationContext';
 import Avatar from '../../components/common/Avatar';
@@ -33,20 +34,44 @@ export default function NotificationsScreen() {
       <Header
         title="Notifications"
         subtitle={unread > 0 ? `${unread} unread` : undefined}
-        leftIcon={<Text style={{ color: colors.text, fontSize: 24, lineHeight: 24 }}>‹</Text>}
+        leftIcon={<Ionicons name="chevron-back" size={26} color={colors.text} />}
         onLeftPress={() => navigation.goBack()}
-        rightIcons={[
-          {
-            icon: <Text style={{ fontSize: 13, color: colors.electricBlue, fontWeight: '800' }}>Mark all read</Text>,
-            onPress: markAllRead,
-          },
-        ]}
       />
+
+      {unread > 0 ? (
+        <View style={{ paddingHorizontal: spacing.md, paddingBottom: 8 }}>
+          <TouchableOpacity
+            onPress={markAllRead}
+            style={[
+              styles.markAllBtn,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radius.pill,
+              },
+            ]}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="checkmark-done" size={16} color={colors.electricBlue} />
+            <Text
+              style={{
+                color: colors.electricBlue,
+                fontWeight: '800',
+                marginLeft: 6,
+                fontSize: 12,
+                includeFontPadding: false,
+              }}
+            >
+              Mark all as read
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <FlatList
         data={items}
         keyExtractor={(i) => i._id}
-        contentContainerStyle={{ padding: spacing.md }}
+        contentContainerStyle={{ padding: spacing.md, paddingTop: 0 }}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[
@@ -103,4 +128,13 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', borderWidth: 1 },
+  markAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
 });

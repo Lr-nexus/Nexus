@@ -84,6 +84,8 @@ export const Screens = {
   Chat: safe('Chat', () => require('../screens/chat/ChatScreen')),
   NewChat: safe('NewChat', () => require('../screens/chat/NewChatScreen')),
   ChatInfo: Missing('ChatInfo'),
+  ContactPicker: safe('ContactPicker', () => require('../screens/chat/ContactPickerScreen')),
+  LocationShare: safe('LocationShare', () => require('../screens/chat/LocationShareScreen')),
 
   // ── Groups / Communities / Channels / Polls ──────────────
   CreateGroup: safe('CreateGroup', () => require('../screens/groups/CreateGroupScreen')),
