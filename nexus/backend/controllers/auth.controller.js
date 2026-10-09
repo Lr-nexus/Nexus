@@ -106,7 +106,7 @@ exports.register = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// LOGIN — password only (no OTP)
+// LOGIN — password only
 // ─────────────────────────────────────────────
 exports.login = asyncHandler(async (req, res) => {
   const { identifier, password } = req.body;
@@ -119,8 +119,10 @@ exports.login = asyncHandler(async (req, res) => {
 
   if (!user) throw new ApiError(401, 'Invalid credentials.');
 
-  const ok = await passwordService.compare(password, user.passwordHash);
-  if (!ok) throw new ApiError(401, 'Invalid credentials.');
+  // NOTE: variable name is `match` — DO NOT use `ok` here (it would shadow
+  // the imported response helper and break every return statement below).
+  const match = await passwordService.compare(password, user.passwordHash);
+  if (!match) throw new ApiError(401, 'Invalid credentials.');
 
   if (!user.isEmailVerified) {
     await otpService.createAndSend({
@@ -146,7 +148,7 @@ exports.login = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// OTP — used for registration verification and account recovery
+// OTP — registration verification + account recovery
 // ─────────────────────────────────────────────
 exports.requestOtp = asyncHandler(async (req, res) => {
   const { identifier, purpose } = req.body;
