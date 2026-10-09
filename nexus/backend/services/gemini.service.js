@@ -8,27 +8,71 @@ function getClient() {
   return client;
 }
 
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 503 = overloaded, 429 = rate limited — both worth retrying
+function isRetryable(err) {
+  const msg = String(err?.message || '');
+  return (
+    msg.includes('503') ||
+    msg.includes('UNAVAILABLE') ||
+    msg.includes('429') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('overloaded') ||
+    msg.includes('high demand')
+  );
+}
+
+async function callModel(model, prompt) {
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  });
+  const text =
+    response?.text ||
+    response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    '';
+  if (!text) throw new Error('Empty AI response');
+  return text;
+}
+
 exports.generate = async (prompt) => {
-  try {
-    const ai = getClient();
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const primary = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const fallback = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
+  const models = [primary, fallback];
+  const attemptsPerModel = 3;
+  let lastError = null;
 
-    const text =
-      response?.text ||
-      response?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      '';
-    if (!text) throw new ApiError(502, 'Empty AI response.');
-    return text;
-  } catch (e) {
-    if (e instanceof ApiError) throw e;
-    console.error('Gemini error:', e.message);
-    throw new ApiError(502, 'Rizz AI is temporarily unavailable.');
+  for (const model of models) {
+    for (let attempt = 1; attempt <= attemptsPerModel; attempt++) {
+      try {
+        console.log(`🤖 Gemini: ${model} (attempt ${attempt}/${attemptsPerModel})`);
+        return await callModel(model, prompt);
+      } catch (e) {
+        lastError = e;
+
+        // Non-retryable (bad request, invalid key, etc.) → fail fast
+        if (!isRetryable(e)) {
+          console.error(`💥 Gemini ${model} fatal:`, e.message);
+          if (e instanceof ApiError) throw e;
+          throw new ApiError(502, 'Rizz AI is temporarily unavailable.');
+        }
+
+        console.warn(`⚠️ Gemini ${model} attempt ${attempt} failed: ${e.message.slice(0, 120)}`);
+
+        if (attempt < attemptsPerModel) {
+          // 500ms, 1500ms, 3000ms
+          await wait(500 * Math.pow(3, attempt - 1));
+        }
+      }
+    }
+    console.warn(`⚠️ Falling back from ${model} to next model…`);
   }
+
+  console.error('💥 Gemini: all attempts and fallbacks failed:', lastError?.message);
+  throw new ApiError(502, 'Rizz AI is temporarily unavailable. Try again in a moment.');
 };
 
 exports.generateJSON = async (prompt) => {
@@ -37,7 +81,9 @@ exports.generateJSON = async (prompt) => {
     return JSON.parse(text);
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
     throw new ApiError(502, 'Invalid AI response.');
   }
 };
