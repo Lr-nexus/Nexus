@@ -75,9 +75,11 @@ export default function CreatePostScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+  enabled
+>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} disabled={uploading}>
             <Text style={{ color: colors.text, fontSize: 15 }}>Cancel</Text>

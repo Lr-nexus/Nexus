@@ -94,10 +94,11 @@ export default function PostDetailScreen({ route, navigation }) {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+  enabled
+>
         <ScrollView keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
             <Avatar uri={author.profilePicture} name={author.fullName} size={40} />

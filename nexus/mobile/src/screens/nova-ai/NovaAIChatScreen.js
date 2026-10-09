@@ -65,9 +65,11 @@ export default function NovaAIChatScreen() {
       />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+  enabled
+>
         <ScrollView
           ref={ref}
           contentContainerStyle={{ padding: spacing.md }}

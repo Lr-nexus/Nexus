@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, KeyboardAvoidingView, Platform,
-  Alert, ActivityIndicator, Keyboard,
+  Alert, ActivityIndicator, Keyboard, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import ChatBubble from '../../components/chat/ChatBubble';
 import ChatInput from '../../components/chat/ChatInput';
 import MessageActions from '../../components/chat/MessageActions';
 import VoiceRecorder from '../../components/chat/VoiceRecorder';
+import RizzInlinePanel from '../../components/chat/RizzInlinePanel';
 import BottomSheet from '../../components/common/BottomSheet';
 import { ROUTES } from '../../constants/routes';
 import { pickImage, pickVideo, pickDocument } from '../../utils/media';
@@ -52,10 +53,11 @@ export default function ChatScreen({ route }) {
   const [actionsFor, setActionsFor] = useState(null);
   const [attachOpen, setAttachOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [rizzOpen, setRizzOpen] = useState(false);
+  const [inputRef = null, setInputRef] = useState(null);
 
   const listRef = useRef(null);
-  const inputRef = useRef(null);
-  const typingTimerRef = useRef(null);
+  const innerInputRef = useRef(null);
   const seenIdsRef = useRef(new Set());
 
   const load = useCallback(async () => {
@@ -201,10 +203,7 @@ export default function ChatScreen({ route }) {
         content: doc.name,
         type: 'file',
         media: {
-          url: up.url,
-          publicId: up.publicId,
-          mimeType: doc.mimeType,
-          name: doc.name,
+          url: up.url, publicId: up.publicId, mimeType: doc.mimeType, name: doc.name,
         },
       });
       seenIdsRef.current.add(res.message._id);
@@ -257,6 +256,13 @@ export default function ChatScreen({ route }) {
     }
   }
 
+  // Build context for Rizz: last 3 non-empty contents
+  const recentContext = messages
+    .filter((m) => m.content)
+    .slice(-3)
+    .map((m) => m.content)
+    .join('\n');
+
   if (!conversation) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -300,6 +306,7 @@ export default function ChatScreen({ route }) {
             )}
             contentContainerStyle={{ paddingVertical: 10, paddingBottom: 8 }}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           />
         )}
@@ -308,23 +315,26 @@ export default function ChatScreen({ route }) {
           <Text style={[styles.typing, { color: colors.textMuted }]}>typing…</Text>
         ) : null}
 
-        <ChatInput
-          ref={inputRef}
-          sending={sending}
-          onSend={sendText}
-          onAttach={() => setAttachOpen(true)}
-          onRizz={() =>
-            navigation.navigate('RizzTab', {
-              screen: 'RizzChat',
-              params: {
-                mode: 'reply',
-                context: messages.slice(-3).map((m) => m.content).filter(Boolean).join('\n'),
-                conversationId: conversation._id,
-              },
-            })
-          }
-          onVoicePress={() => setVoiceOpen(true)}
-        />
+        {rizzOpen ? (
+          <RizzInlinePanel
+            visible={rizzOpen}
+            onClose={() => setRizzOpen(false)}
+            recentContext={recentContext}
+            onUseMessage={(text) => sendText(text)}
+          />
+        ) : (
+          <ChatInput
+            ref={innerInputRef}
+            sending={sending}
+            onSend={sendText}
+            onAttach={() => setAttachOpen(true)}
+            onRizz={() => {
+              Keyboard.dismiss();
+              setRizzOpen(true);
+            }}
+            onVoicePress={() => setVoiceOpen(true)}
+          />
+        )}
       </KeyboardAvoidingView>
 
       <MessageActions

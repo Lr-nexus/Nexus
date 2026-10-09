@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, FlatList, RefreshControl, StyleSheet, TouchableOpacity,
+  View, FlatList, RefreshControl, StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import ChatListItem from '../../components/chat/ChatListItem';
 import Header from '../../components/common/Header';
 import EmptyState from '../../components/common/EmptyState';
 import ErrorState from '../../components/common/ErrorState';
+import BottomSheet from '../../components/common/BottomSheet';
 import { SkeletonRow } from '../../components/common/Skeleton';
 import { ROUTES } from '../../constants/routes';
 
@@ -23,6 +24,7 @@ export default function ChatsListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -50,7 +52,7 @@ export default function ChatsListScreen() {
           },
           {
             icon: <Ionicons name="create-outline" size={22} color={colors.text} />,
-            onPress: () => navigation.navigate(ROUTES.NEW_CHAT),
+            onPress: () => setComposeOpen(true),
           },
         ]}
       />
@@ -76,9 +78,9 @@ export default function ChatsListScreen() {
             <EmptyState
               emoji="💬"
               title="No conversations yet"
-              subtitle="Start a chat with someone in your network."
+              subtitle="Start a chat or create a group."
               actionLabel="Start new chat"
-              onAction={() => navigation.navigate(ROUTES.NEW_CHAT)}
+              onAction={() => setComposeOpen(true)}
             />
           }
           refreshControl={
@@ -92,6 +94,22 @@ export default function ChatsListScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <BottomSheet
+        visible={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        title="Start something new"
+        items={[
+          {
+            label: '💬  New chat',
+            onPress: () => navigation.navigate(ROUTES.NEW_CHAT),
+          },
+          {
+            label: '👥  New group',
+            onPress: () => navigation.navigate(ROUTES.CREATE_GROUP),
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }

@@ -15,7 +15,7 @@ import { storage } from '../../utils/storage';
 import { ROUTES } from '../../constants/routes';
 
 const { width } = Dimensions.get('window');
-const TILE = (width - 8) / 3;
+const TILE = (width - 16) / 3;
 
 const TABS = [
   { key: 'top', label: 'Top' },
@@ -38,7 +38,6 @@ export default function SearchScreen() {
   const [results, setResults] = useState(null);
   const [recent, setRecent] = useState([]);
 
-  // Load recent searches on mount
   useEffect(() => {
     (async () => {
       const saved = await storage.get('nova_recent_searches');
@@ -78,7 +77,6 @@ export default function SearchScreen() {
     if (query.trim()) saveRecent(query.trim());
   };
 
-  // ── Aggregators per tab ──
   const lists = useMemo(() => {
     if (!results) return {};
     const users = results.users || [];
@@ -89,13 +87,7 @@ export default function SearchScreen() {
     const channels = results.channels || [];
 
     return {
-      users,
-      posts,
-      vibes,
-      hashtags,
-      communities,
-      channels,
-      // "Top" is a mixed preview
+      users, posts, vibes, hashtags, communities, channels,
       top: {
         users: users.slice(0, 6),
         posts: posts.slice(0, 9),
@@ -107,24 +99,16 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* Search input row */}
+      {/* Search row */}
       <View style={[styles.searchRow, { paddingHorizontal: spacing.md }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={12}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
 
         <View
           style={[
             styles.inputWrap,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: 12,
-            },
+            { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
         >
           <Ionicons name="search" size={18} color={colors.textMuted} />
@@ -148,73 +132,69 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {/* Tabs */}
+      {/* Tabs — fixed height so they never grow */}
       {results ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingVertical: 8, gap: 8 }}
-        >
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            return (
-              <TouchableOpacity
-                key={t.key}
-                onPress={() => setTab(t.key)}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: active ? colors.nexusBlue : colors.card,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: active ? '#fff' : colors.text,
-                    fontWeight: '700',
-                    fontSize: 13,
-                    includeFontPadding: false,
-                  }}
+        <View style={styles.tabsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsContent}
+            style={styles.tabsScroll}
+          >
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  onPress={() => setTab(t.key)}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: active ? colors.nexusBlue : colors.card, borderColor: colors.border },
+                  ]}
                 >
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={{
+                      color: active ? '#fff' : colors.text,
+                      fontWeight: '700',
+                      fontSize: 13,
+                      includeFontPadding: false,
+                    }}
+                  >
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       ) : null}
 
-      {/* Body */}
-      {loading ? (
-        <ActivityIndicator color={colors.electricBlue} style={{ marginTop: 40 }} />
-      ) : !results ? (
-        <RecentSearches
-          recent={recent}
-          onClear={async () => {
-            setRecent([]);
-            await storage.remove('nova_recent_searches');
-          }}
-          onTap={(t) => setQuery(t)}
-        />
-      ) : (
-        <Body
-          tab={tab}
-          lists={lists}
-          navigation={navigation}
-          onPickUser={(id) => navigation.navigate(ROUTES.USER_PROFILE, { userId: id })}
-          onPickPost={(id) => navigation.navigate(ROUTES.POST_DETAIL, { postId: id })}
-          onPickVibe={(id) => navigation.navigate(ROUTES.VIBES, { initialId: id })}
-          onPickTag={(tag) => navigation.navigate(ROUTES.HASHTAG, { tag })}
-          onPickCommunity={(id) => navigation.navigate(ROUTES.COMMUNITY, { communityId: id })}
-          onPickChannel={(id) => navigation.navigate(ROUTES.CHANNEL, { channelId: id })}
-        />
-      )}
+      {/* Body — takes remaining space */}
+      <View style={styles.body}>
+        {loading ? (
+          <ActivityIndicator color={colors.electricBlue} style={{ marginTop: 40 }} />
+        ) : !results ? (
+          <RecentSearches
+            recent={recent}
+            onClear={async () => { setRecent([]); await storage.remove('nova_recent_searches'); }}
+            onTap={(t) => setQuery(t)}
+          />
+        ) : (
+          <Body
+            tab={tab}
+            lists={lists}
+            onPickUser={(id) => navigation.navigate(ROUTES.USER_PROFILE, { userId: id })}
+            onPickPost={(id) => navigation.navigate(ROUTES.POST_DETAIL, { postId: id })}
+            onPickVibe={(id) => navigation.navigate(ROUTES.VIBES, { initialId: id })}
+            onPickTag={(tag) => navigation.navigate(ROUTES.HASHTAG, { tag })}
+            onPickCommunity={(id) => navigation.navigate(ROUTES.COMMUNITY, { communityId: id })}
+            onPickChannel={(id) => navigation.navigate(ROUTES.CHANNEL, { channelId: id })}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
-
-/* ─────────────────────────────────────────────────────────── */
 
 function RecentSearches({ recent, onTap, onClear }) {
   const { colors, spacing } = useTheme();
@@ -230,21 +210,13 @@ function RecentSearches({ recent, onTap, onClear }) {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.md }}>
       <View style={styles.recentHeader}>
-        <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-          Recent
-        </Text>
+        <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>Recent</Text>
         <TouchableOpacity onPress={onClear}>
-          <Text style={{ color: colors.electricBlue, fontSize: 13, fontWeight: '700' }}>
-            Clear
-          </Text>
+          <Text style={{ color: colors.electricBlue, fontSize: 13, fontWeight: '700' }}>Clear</Text>
         </TouchableOpacity>
       </View>
       {recent.map((term, i) => (
-        <TouchableOpacity
-          key={`${term}-${i}`}
-          onPress={() => onTap(term)}
-          style={styles.recentRow}
-        >
+        <TouchableOpacity key={`${term}-${i}`} onPress={() => onTap(term)} style={styles.recentRow}>
           <Ionicons name="time-outline" size={18} color={colors.textMuted} />
           <Text style={{ color: colors.text, marginLeft: 12, fontSize: 14 }}>{term}</Text>
         </TouchableOpacity>
@@ -253,47 +225,23 @@ function RecentSearches({ recent, onTap, onClear }) {
   );
 }
 
-function Body({
-  tab,
-  lists,
-  onPickUser,
-  onPickPost,
-  onPickVibe,
-  onPickTag,
-  onPickCommunity,
-  onPickChannel,
-}) {
+function Body({ tab, lists, onPickUser, onPickPost, onPickVibe, onPickTag, onPickCommunity, onPickChannel }) {
   const { colors, spacing } = useTheme();
 
-  if (tab === 'users') {
-    return <UserList users={lists.users} onPick={onPickUser} />;
-  }
-  if (tab === 'posts') {
-    return <MediaGrid items={lists.posts} kind="posts" onPick={onPickPost} />;
-  }
-  if (tab === 'vibes') {
-    return <MediaGrid items={lists.vibes} kind="vibes" onPick={onPickVibe} />;
-  }
-  if (tab === 'hashtags') {
-    return <TagList tags={lists.hashtags} onPick={onPickTag} />;
-  }
-  if (tab === 'communities') {
-    return <NamedList items={lists.communities} onPick={onPickCommunity} emoji="🏛️" />;
-  }
-  if (tab === 'channels') {
-    return <NamedList items={lists.channels} onPick={onPickChannel} emoji="📢" />;
-  }
+  if (tab === 'users') return <UserList users={lists.users} onPick={onPickUser} />;
+  if (tab === 'posts') return <MediaGrid items={lists.posts} kind="posts" onPick={onPickPost} />;
+  if (tab === 'vibes') return <MediaGrid items={lists.vibes} kind="vibes" onPick={onPickVibe} />;
+  if (tab === 'hashtags') return <TagList tags={lists.hashtags} onPick={onPickTag} />;
+  if (tab === 'communities') return <NamedList items={lists.communities} onPick={onPickCommunity} emoji="🏛️" />;
+  if (tab === 'channels') return <NamedList items={lists.channels} onPick={onPickChannel} emoji="📢" />;
 
-  // Top — mixed layout
   const t = lists.top || { users: [], posts: [], vibes: [], hashtags: [] };
   const total = t.users.length + t.posts.length + t.vibes.length + t.hashtags.length;
 
-  if (!total) {
-    return <EmptyState emoji="🤔" title="No results" subtitle="Try a different search." />;
-  }
+  if (!total) return <EmptyState emoji="🤔" title="No results" subtitle="Try a different search." />;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: spacing.xl }}>
       {t.users.length ? (
         <>
           <Text style={[styles.section, { color: colors.textMuted, paddingHorizontal: spacing.md }]}>
@@ -366,154 +314,101 @@ function UserRow({ user, onPress }) {
 
 function MediaGrid({ items, kind, onPick, noScroll }) {
   if (!items?.length) {
-    return (
-      <EmptyState
-        emoji={kind === 'vibes' ? '🎬' : '🖼️'}
-        title={`No ${kind} found`}
-        compact
-      />
-    );
+    return <EmptyState emoji={kind === 'vibes' ? '🎬' : '🖼️'} title={`No ${kind} found`} compact />;
   }
-  const List = noScroll ? View : FlatList;
+
+  const renderTile = (it) => {
+    const media = it.media?.[0]?.url || it.videoUrl || it.thumbnail || null;
+    return (
+      <TouchableOpacity
+        key={it._id}
+        onPress={() => onPick(it._id)}
+        style={{ width: TILE, height: TILE, margin: 2, borderRadius: 8, overflow: 'hidden' }}
+        activeOpacity={0.85}
+      >
+        {media ? (
+          <Image source={{ uri: media }} style={{ flex: 1 }} resizeMode="cover" />
+        ) : (
+          <View style={{ flex: 1, backgroundColor: '#1a1a2a', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+            <Text numberOfLines={4} style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center' }}>
+              {it.caption || 'Text'}
+            </Text>
+          </View>
+        )}
+        {kind === 'vibes' ? (
+          <View style={{ position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>VIBE</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  if (noScroll) {
+    return <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{items.map(renderTile)}</View>;
+  }
   return (
-    <List
-      style={{ paddingHorizontal: 2 }}
-      {...(noScroll ? { style: { flexDirection: 'row', flexWrap: 'wrap' } } : {})}
-    >
-      {items.map((it) => {
-        const media =
-          it.media?.[0]?.url ||
-          it.videoUrl ||
-          it.thumbnail ||
-          null;
-        return (
-          <TouchableOpacity
-            key={it._id}
-            onPress={() => onPick(it._id)}
-            style={{ width: TILE, height: TILE, margin: 2, borderRadius: 8, overflow: 'hidden' }}
-            activeOpacity={0.85}
-          >
-            {media ? (
-              <Image source={{ uri: media }} style={{ flex: 1 }} resizeMode="cover" />
-            ) : (
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: '#1a1a2a',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 8,
-                }}
-              >
-                <Text
-                  numberOfLines={4}
-                  style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center' }}
-                >
-                  {it.caption || 'Text'}
-                </Text>
-              </View>
-            )}
-            {kind === 'vibes' ? (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 6,
-                  backgroundColor: 'rgba(0,0,0,0.55)',
-                  borderRadius: 6,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                }}
-              >
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>VIBE</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        );
-      })}
-    </List>
+    <FlatList
+      data={items}
+      keyExtractor={(i) => i._id}
+      numColumns={3}
+      renderItem={({ item }) => renderTile(item)}
+    />
   );
 }
 
 function TagList({ tags, onPick, noScroll }) {
   const { colors, spacing } = useTheme();
   if (!tags?.length) return <EmptyState emoji="🏷️" title="No hashtags found" compact />;
-  const Container = noScroll ? View : FlatList;
-  return (
-    <Container
-      {...(noScroll
-        ? { style: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md } }
-        : {})}
-      data={noScroll ? undefined : tags}
-      keyExtractor={noScroll ? undefined : (i) => i._id || i.tag}
-      renderItem={noScroll ? undefined : ({ item }) => (
-        <TouchableOpacity
-          onPress={() => onPick(item.tag)}
-          style={[styles.tagRow, { borderBottomColor: colors.border }]}
-        >
-          <View
-            style={[
-              styles.tagCircle,
-              { backgroundColor: colors.card, marginRight: 12 },
-            ]}
+
+  if (noScroll) {
+    return (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md }}>
+        {tags.map((tag) => (
+          <TouchableOpacity
+            key={tag._id || tag.tag}
+            onPress={() => onPick(tag.tag)}
+            style={{
+              paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1,
+              borderColor: colors.border, backgroundColor: colors.card, marginRight: 8, marginBottom: 8,
+            }}
           >
+            <Text style={{ color: colors.text, fontWeight: '700' }}>#{tag.tag}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }
+  return (
+    <FlatList
+      data={tags}
+      keyExtractor={(i) => i._id || i.tag}
+      renderItem={({ item }) => (
+        <TouchableOpacity onPress={() => onPick(item.tag)} style={[styles.tagRow, { borderBottomColor: colors.border }]}>
+          <View style={[styles.tagCircle, { backgroundColor: colors.card, marginRight: 12 }]}>
             <Text style={{ color: colors.text, fontWeight: '800' }}>#</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700' }}>#{item.tag}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-              {item.postsCount || 0} posts
-            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.postsCount || 0} posts</Text>
           </View>
         </TouchableOpacity>
       )}
-    >
-      {noScroll
-        ? tags.map((tag) => (
-            <TouchableOpacity
-              key={tag._id || tag.tag}
-              onPress={() => onPick(tag.tag)}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                marginRight: 8,
-                marginBottom: 8,
-              }}
-            >
-              <Text style={{ color: colors.text, fontWeight: '700' }}>#{tag.tag}</Text>
-            </TouchableOpacity>
-          ))
-        : null}
-    </Container>
+    />
   );
 }
 
 function NamedList({ items, onPick, emoji }) {
   const { colors, spacing } = useTheme();
-  if (!items?.length) {
-    return <EmptyState emoji={emoji} title="No results" compact />;
-  }
+  if (!items?.length) return <EmptyState emoji={emoji} title="No results" compact />;
   return (
     <FlatList
       data={items}
       keyExtractor={(i) => i._id}
       contentContainerStyle={{ padding: spacing.md }}
       renderItem={({ item }) => (
-        <TouchableOpacity
-          onPress={() => onPick(item._id)}
-          style={styles.userRow}
-          activeOpacity={0.75}
-        >
-          <View
-            style={[
-              styles.tagCircle,
-              { backgroundColor: colors.card, width: 46, height: 46, borderRadius: 23 },
-            ]}
-          >
+        <TouchableOpacity onPress={() => onPick(item._id)} style={styles.userRow} activeOpacity={0.75}>
+          <View style={[styles.tagCircle, { backgroundColor: colors.card, width: 46, height: 46, borderRadius: 23 }]}>
             <Text style={{ fontSize: 20 }}>{emoji}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
@@ -533,67 +428,30 @@ function NamedList({ items, onPick, emoji }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 6,
-  },
+  body: { flex: 1 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 6 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   inputWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    gap: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    height: 44, paddingHorizontal: 12, borderWidth: 1, borderRadius: 12, gap: 8,
   },
-  input: {
-    flex: 1,
-    padding: 0,
-    fontSize: 15,
-    includeFontPadding: false,
+  input: { flex: 1, padding: 0, fontSize: 15, includeFontPadding: false },
+  tabsContainer: { height: 50, flexGrow: 0 },
+  tabsScroll: { flexGrow: 0 },
+  tabsContent: {
+    paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center', gap: 8,
   },
   chip: {
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    paddingHorizontal: 14, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  section: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-    marginTop: 16,
-    marginBottom: 8,
-  },
+  section: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginTop: 16, marginBottom: 8 },
   userRow: { flexDirection: 'row', alignItems: 'center' },
   tagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
-  tagCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  recentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
+  tagCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  recentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
 });

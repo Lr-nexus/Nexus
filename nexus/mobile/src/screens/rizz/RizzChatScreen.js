@@ -1,11 +1,12 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard,
+  Alert, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { rizzApi } from '../../api/rizz.api';
 import RizzAvatar from '../../components/rizz/RizzAvatar';
@@ -93,16 +94,10 @@ export default function RizzChatScreen() {
     }
   }
 
-  async function regenerate() {
-    if (!input.trim()) return;
-    await generate();
-  }
-
   async function refine(option) {
     if (!responses.length) return;
     setRefining(true);
     try {
-      // Uses rewrite endpoint to refine the first response in the chosen direction
       const res = await rizzApi.rewrite({
         message: responses[0],
         tone: option.toLowerCase(),
@@ -120,9 +115,9 @@ export default function RizzChatScreen() {
 
   function sendToChat(text) {
     if (params.conversationId) {
-      navigation.navigate('Chat', {
-        conversation: { _id: params.conversationId },
-        prefill: text,
+      navigation.navigate('ChatsTab', {
+        screen: 'Chat',
+        params: { conversation: { _id: params.conversationId }, prefill: text },
       });
     } else {
       Clipboard.setStringAsync(text);
@@ -130,38 +125,28 @@ export default function RizzChatScreen() {
     }
   }
 
-  const headerTitle = cfg.title;
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={[styles.header, { borderBottomColor: colors.border, paddingHorizontal: spacing.md }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBtn}>
-          <Text style={{ color: colors.text, fontSize: 24, lineHeight: 24 }}>‹</Text>
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
         <RizzAvatar size={34} pulsing={loading} />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>Rizz AI</Text>
-          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{headerTitle}</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{cfg.title}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => navigation.navigate(ROUTES.RIZZ_HISTORY)}
-          hitSlop={8}
-          style={styles.backBtn}
-        >
-          <Text style={{ fontSize: 18 }}>🕘</Text>
+        <TouchableOpacity onPress={() => navigation.navigate(ROUTES.RIZZ_HISTORY)} hitSlop={8} style={styles.backBtn}>
+          <Ionicons name="time-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Context input */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{cfg.field}</Text>
           <TextInput
             ref={inputRef}
@@ -181,19 +166,8 @@ export default function RizzChatScreen() {
             ]}
           />
 
-          {params.context ? (
-            <Text style={{ color: colors.textDim, fontSize: 11, marginTop: 4 }}>
-              Prefilled from your chat · only what you see here is sent to Gemini.
-            </Text>
-          ) : null}
-
-          {/* Style chips */}
           <Text style={[styles.label, { color: colors.textMuted, marginTop: 16 }]}>Vibe</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 6 }}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
             {RIZZ_STYLES.map((s) => (
               <RizzStyleChip
                 key={s.key}
@@ -213,40 +187,19 @@ export default function RizzChatScreen() {
             style={{ marginTop: 16 }}
           />
 
-          {/* Loading placeholder */}
-          {loading ? (
-            <View style={[styles.loadingBox, { marginTop: 22 }]}>
-              <ActivityIndicator color={colors.electricBlue} />
-              <Text style={{ color: colors.textMuted, marginTop: 10 }}>
-                Rizz is thinking…
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Responses */}
           {responses.length ? (
             <View style={{ marginTop: 20 }}>
               <Text style={[styles.label, { color: colors.textMuted, marginBottom: 8 }]}>
                 TRY ONE OF THESE
               </Text>
               {responses.map((r, i) => (
-                <RizzResponseCard
-                  key={i}
-                  index={i}
-                  text={r}
-                  style={style}
-                  onSendToChat={sendToChat}
-                />
+                <RizzResponseCard key={i} index={i} text={r} style={style} onSendToChat={sendToChat} />
               ))}
 
               <Text style={[styles.label, { color: colors.textMuted, marginTop: 18, marginBottom: 8 }]}>
                 REFINE
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 4 }}
-              >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
                 {TONE_OPTIONS.map((t) => (
                   <TouchableOpacity
                     key={t}
@@ -265,14 +218,12 @@ export default function RizzChatScreen() {
               </ScrollView>
 
               <TouchableOpacity
-                onPress={regenerate}
+                onPress={generate}
                 disabled={loading}
-                style={[
-                  styles.regen,
-                  { borderColor: colors.border, borderRadius: radius.md, marginTop: 18 },
-                ]}
+                style={[styles.regen, { borderColor: colors.border, borderRadius: radius.md, marginTop: 18 }]}
               >
-                <Text style={{ color: colors.text, fontWeight: '700' }}>🔄 Regenerate</Text>
+                <Ionicons name="refresh" size={16} color={colors.text} />
+                <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 6 }}>Regenerate</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -284,32 +235,16 @@ export default function RizzChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginBottom: 6 },
   input: {
-    minHeight: 90,
-    padding: 14,
-    borderWidth: 1,
-    textAlignVertical: 'top',
-    fontSize: 15,
+    minHeight: 90, padding: 14, borderWidth: 1,
+    textAlignVertical: 'top', fontSize: 15,
   },
-  loadingBox: { alignItems: 'center', padding: 24 },
-  toneChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderWidth: 1,
-  },
+  toneChip: { paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1 },
   regen: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    height: 48, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, flexDirection: 'row',
   },
 });

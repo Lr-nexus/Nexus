@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.nexus.nova",
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS"

@@ -53,39 +53,17 @@ export default function HomeScreen() {
 
   const header = (
     <>
-      {/* ── Dedicated search bar (Instagram-style) ── */}
-      <View style={[styles.topBar, { paddingHorizontal: spacing.md, paddingTop: 4 }]}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate(ROUTES.SEARCH)}
-          activeOpacity={0.85}
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: 12,
-            },
-          ]}
-        >
-          <Ionicons name="search" size={20} color={colors.textMuted} />
-          <Text
-            style={{
-              color: colors.textDim,
-              marginLeft: 10,
-              fontSize: 15,
-              includeFontPadding: false,
-            }}
-          >
-            Search Nova
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Top row (brand + notifications) */}
-      <View style={[styles.topBar, { paddingHorizontal: spacing.md, marginTop: 10 }]}>
+      {/* Instagram-style top bar */}
+      <View
+        style={[
+          styles.topBar,
+          { paddingHorizontal: spacing.md, paddingTop: 4, paddingBottom: 6 },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => navigation.navigate(ROUTES.MY_PROFILE)}
           style={styles.brandRow}
+          activeOpacity={0.8}
         >
           <LinearGradient
             colors={['#2563EB', '#7C3AED']}
@@ -100,45 +78,56 @@ export default function HomeScreen() {
 
         <View style={styles.rightIcons}>
           <TouchableOpacity
-            onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
-            style={[
-              styles.iconBtn,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
+            onPress={() => navigation.navigate(ROUTES.SEARCH)}
+            style={styles.iconBtn}
+            hitSlop={6}
           >
-            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            <Ionicons name="search-outline" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate(ROUTES.MY_PROFILE)}>
-            <Avatar uri={user?.profilePicture} name={user?.fullName} size={40} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+            style={styles.iconBtn}
+            hitSlop={6}
+          >
+            <Ionicons name="heart-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate(ROUTES.NEW_CHAT)}
+            hitSlop={6}
+          >
+            <Ionicons name="paper-plane-outline" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Section label */}
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: colors.text, paddingHorizontal: spacing.md, marginTop: 18 },
-        ]}
-      >
-        Your Circle
-      </Text>
 
       {/* Stories row */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: spacing.md, paddingVertical: 8, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingVertical: 6,
+          gap: 14,
+        }}
       >
         <TouchableOpacity
           onPress={() => navigation.navigate(ROUTES.CREATE_STORY)}
           style={styles.storyAdd}
+          activeOpacity={0.85}
         >
-          <View style={[styles.storyAddCircle, { borderColor: colors.border }]}>
-            <Ionicons name="add" size={28} color={colors.text} />
+          <View
+            style={[
+              styles.storyAddCircle,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+          >
+            <Ionicons name="add" size={26} color={colors.text} />
           </View>
-          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
-            Add Show
+          <Text
+            numberOfLines={1}
+            style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}
+          >
+            Your story
           </Text>
         </TouchableOpacity>
 
@@ -149,6 +138,7 @@ export default function HomeScreen() {
               navigation.navigate(ROUTES.STORY_VIEW, { stories, initialIndex: idx })
             }
             style={styles.storyItem}
+            activeOpacity={0.85}
           >
             <Avatar
               uri={story.authorId?.profilePicture}
@@ -159,7 +149,12 @@ export default function HomeScreen() {
             />
             <Text
               numberOfLines={1}
-              style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, maxWidth: 66 }}
+              style={{
+                color: colors.textMuted,
+                fontSize: 11,
+                marginTop: 6,
+                maxWidth: 66,
+              }}
             >
               {story.authorId?.username || story.authorId?.fullName?.split(' ')[0]}
             </Text>
@@ -167,10 +162,13 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      {/* Discover */}
+      {/* Discover header */}
       <View style={styles.discoverHeader}>
         <Text
-          style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md }]}
+          style={[
+            styles.sectionTitle,
+            { color: colors.text, paddingHorizontal: spacing.md },
+          ]}
         >
           Discover
         </Text>
@@ -181,10 +179,15 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Discover carousel */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12, paddingBottom: 8 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          gap: 12,
+          paddingBottom: 8,
+        }}
       >
         {posts.slice(0, 5).map((p) => (
           <TouchableOpacity
@@ -200,7 +203,9 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
+              <View
+                style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
+              />
             )}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -230,7 +235,10 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.bg }]}
+      edges={['top']}
+    >
       {loading ? (
         <View style={{ padding: spacing.md }}>
           <SkeletonPost />
@@ -287,45 +295,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-  },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandMark: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandText: { color: '#fff', fontSize: 18, fontWeight: '900', includeFontPadding: false },
+  brandText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '900',
+    includeFontPadding: false,
+  },
   brandName: { fontSize: 20, fontWeight: '800', letterSpacing: 0.3 },
-  rightIcons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
+  rightIcons: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  iconBtn: { padding: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
-  storyAdd: { alignItems: 'center' },
+  storyAdd: { alignItems: 'center', width: 68 },
   storyAddCircle: {
     width: 66,
     height: 66,
     borderRadius: 33,
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  storyItem: { alignItems: 'center' },
+  storyItem: { alignItems: 'center', width: 68 },
   discoverHeader: {
     flexDirection: 'row',
     alignItems: 'center',
