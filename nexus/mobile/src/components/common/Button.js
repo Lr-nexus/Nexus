@@ -49,6 +49,7 @@ export default function Button({
   const backgroundColor = bgMap[variant] || colors.nexusBlue;
   const borderColor = borderMap[variant] || 'transparent';
   const color = textColorMap[variant] || '#FFF';
+  const fontSize = fontScale(fontSizeMap[size]);
 
   return (
     <TouchableOpacity
@@ -74,19 +75,11 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color={color} />
       ) : (
-        <View style={styles.row}>
+        <View style={styles.content}>
           {icon ? <View style={styles.iconLeft}>{icon}</View> : null}
           <Text
             numberOfLines={1}
-            style={[
-              styles.txt,
-              {
-                color,
-                fontSize: fontScale(fontSizeMap[size]),
-                lineHeight: fontScale(fontSizeMap[size]) + 2,
-              },
-              textStyle,
-            ]}
+            style={[styles.txt, { color, fontSize }, textStyle]}
           >
             {title}
           </Text>
@@ -102,16 +95,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    flexDirection: 'row',
   },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   txt: {
     fontWeight: '700',
     letterSpacing: 0.2,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    padding: 0,
+    margin: 0,
   },
-  iconLeft: { marginRight: 8, justifyContent: 'center', alignItems: 'center' },
-  iconRight: { marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
+  iconLeft: {
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconRight: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

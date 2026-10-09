@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "scheme": "nova",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexus.nova",
@@ -21,16 +23,28 @@
       "package": "com.nexus.nova",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
-        "CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS"
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
       "expo-secure-store",
-      ["expo-image-picker", { "photosPermission": "Nova needs access to your photos." }]
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nova needs access to your photos."
+        }
+      ],
+      "expo-video"
     ],
     "extra": {
-      "eas": { "projectId": "00000000-0000-0000-0000-000000000000" }
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
     }
   }
 }

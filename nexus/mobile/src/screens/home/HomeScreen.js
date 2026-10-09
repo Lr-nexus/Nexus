@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, RefreshControl, StyleSheet, ScrollView,
   TouchableOpacity, Image, Dimensions,
@@ -12,10 +12,10 @@ import { useAuth } from '../../context/AuthContext';
 import { postsApi } from '../../api/posts.api';
 import { storiesApi } from '../../api/stories.api';
 import PostCard from '../../components/posts/PostCard';
+import StoryCircle from '../../components/stories/StoryCircle';
 import EmptyState from '../../components/common/EmptyState';
 import ErrorState from '../../components/common/ErrorState';
 import { SkeletonPost } from '../../components/common/Skeleton';
-import Avatar from '../../components/common/Avatar';
 import { ROUTES } from '../../constants/routes';
 
 const { width } = Dimensions.get('window');
@@ -51,15 +51,42 @@ export default function HomeScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Group stories by author
+  const groupedStories = useMemo(() => {
+    const map = new Map();
+    for (const story of stories) {
+      const authorId = story.authorId?._id;
+      if (!authorId) continue;
+      if (!map.has(authorId)) {
+        map.set(authorId, { author: story.authorId, stories: [] });
+      }
+      map.get(authorId).stories.push(story);
+    }
+    const groups = Array.from(map.values());
+    // Sort each group's stories oldest → newest (chronological playback)
+    for (const g of groups) {
+      g.stories.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
+    // Sort groups by most recent story first
+    groups.sort((a, b) => {
+      const aLast = a.stories[a.stories.length - 1]?.createdAt;
+      const bLast = b.stories[b.stories.length - 1]?.createdAt;
+      return new Date(bLast) - new Date(aLast);
+    });
+    return groups;
+  }, [stories]);
+
+  function openGroup(group) {
+    navigation.navigate(ROUTES.STORY_VIEW, {
+      stories: group.stories,
+      initialIndex: 0,
+    });
+  }
+
   const header = (
     <>
-      {/* Instagram-style top bar */}
-      <View
-        style={[
-          styles.topBar,
-          { paddingHorizontal: spacing.md, paddingTop: 4, paddingBottom: 6 },
-        ]}
-      >
+      {/* Top bar */}
+      <View style={[styles.topBar, { paddingHorizontal: spacing.md, paddingTop: 4, paddingBottom: 6 }]}>
         <TouchableOpacity
           onPress={() => navigation.navigate(ROUTES.MY_PROFILE)}
           style={styles.brandRow}
@@ -104,66 +131,29 @@ export default function HomeScreen() {
           gap: 14,
         }}
       >
-        <TouchableOpacity
+        {/* Own story circle — shows your profile picture */}
+        <StoryCircle
+          user={user}
+          isOwn
+          hasStory={false}
           onPress={() => navigation.navigate(ROUTES.CREATE_STORY)}
-          style={styles.storyAdd}
-          activeOpacity={0.85}
-        >
-          <View
-            style={[
-              styles.storyAddCircle,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]}
-          >
-            <Ionicons name="add" size={26} color={colors.text} />
-          </View>
-          <Text
-            numberOfLines={1}
-            style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}
-          >
-            Your story
-          </Text>
-        </TouchableOpacity>
+          onAddPress={() => navigation.navigate(ROUTES.CREATE_STORY)}
+        />
 
-        {stories.map((story, idx) => (
-          <TouchableOpacity
-            key={story._id}
-            onPress={() =>
-              navigation.navigate(ROUTES.STORY_VIEW, { stories, initialIndex: idx })
-            }
-            style={styles.storyItem}
-            activeOpacity={0.85}
-          >
-            <Avatar
-              uri={story.authorId?.profilePicture}
-              name={story.authorId?.fullName}
-              size={62}
-              ring
-              ringColor={colors.electricBlue}
-            />
-            <Text
-              numberOfLines={1}
-              style={{
-                color: colors.textMuted,
-                fontSize: 11,
-                marginTop: 6,
-                maxWidth: 66,
-              }}
-            >
-              {story.authorId?.username || story.authorId?.fullName?.split(' ')[0]}
-            </Text>
-          </TouchableOpacity>
+        {/* Grouped stories (one circle per author) */}
+        {groupedStories.map((group) => (
+          <StoryCircle
+            key={group.author._id}
+            user={group.author}
+            hasStory
+            onPress={() => openGroup(group)}
+          />
         ))}
       </ScrollView>
 
       {/* Discover header */}
       <View style={styles.discoverHeader}>
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: colors.text, paddingHorizontal: spacing.md },
-          ]}
-        >
+        <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md }]}>
           Discover
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate(ROUTES.EXPLORE)}>
@@ -173,7 +163,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Discover carousel */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -191,20 +180,11 @@ export default function HomeScreen() {
             style={[styles.discoverCard, { borderColor: colors.border }]}
           >
             {p.media?.[0]?.url ? (
-              <Image
-                source={{ uri: p.media[0].url }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-              />
+              <Image source={{ uri: p.media[0].url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             ) : (
-              <View
-                style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
-              />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
             )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.85)']}
-              style={StyleSheet.absoluteFill}
-            />
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
             <View style={styles.discoverInfo}>
               <Text numberOfLines={1} style={styles.discoverName}>
                 {p.authorId?.fullName || 'Nova user'}
@@ -217,22 +197,14 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: colors.text, paddingHorizontal: spacing.md, marginTop: 12 },
-        ]}
-      >
+      <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md, marginTop: 12 }]}>
         From people you follow
       </Text>
     </>
   );
 
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.bg }]}
-      edges={['top']}
-    >
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
       {loading ? (
         <View style={{ padding: spacing.md }}>
           <SkeletonPost />
@@ -249,9 +221,7 @@ export default function HomeScreen() {
             <PostCard
               post={item}
               onChange={(id, patch) =>
-                setPosts((list) =>
-                  list.map((p) => (p._id === id ? { ...p, ...patch } : p))
-                )
+                setPosts((list) => list.map((p) => (p._id === id ? { ...p, ...patch } : p)))
               }
             />
           )}
@@ -267,10 +237,7 @@ export default function HomeScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
+              onRefresh={() => { setRefreshing(true); load(); }}
               tintColor={colors.electricBlue}
             />
           }
@@ -284,53 +251,22 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 32, height: 32, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
   },
-  brandText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '900',
-    includeFontPadding: false,
-  },
+  brandText: { color: '#fff', fontSize: 17, fontWeight: '900', includeFontPadding: false },
   brandName: { fontSize: 20, fontWeight: '800', letterSpacing: 0.3 },
   rightIcons: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   iconBtn: { padding: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
-  storyAdd: { alignItems: 'center', width: 68 },
-  storyAddCircle: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  storyItem: { alignItems: 'center', width: 68 },
   discoverHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: 16,
-    marginBottom: 6,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingRight: 16, marginBottom: 6, marginTop: 12,
   },
-  discoverCard: {
-    width: CARD_W + 40,
-    height: 200,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
+  discoverCard: { width: CARD_W + 40, height: 200, borderRadius: 18, overflow: 'hidden', borderWidth: 1 },
   discoverInfo: { position: 'absolute', bottom: 12, left: 12, right: 12 },
   discoverName: { color: '#fff', fontWeight: '800', fontSize: 14 },
   discoverCaption: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },

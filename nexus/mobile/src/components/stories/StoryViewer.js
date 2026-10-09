@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator,
+  TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../../context/ThemeContext';
-import Avatar from '../common/Avatar';
 import { storiesApi } from '../../api/stories.api';
 import { timeAgo } from '../../utils/formatDate';
 
@@ -12,17 +14,27 @@ const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
 
 export default function StoryViewer({ stories = [], initialIndex = 0, onClose }) {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const [index, setIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reply, setReply] = useState('');
   const progressTimer = useRef(null);
+
   const story = stories[index];
+  const isVideo = story?.type === 'video' && story?.media?.url;
+
+  const player = useVideoPlayer(
+    isVideo ? { uri: story.media.url } : null,
+    (p) => {
+      if (p) { p.loop = false; if (isVideo) p.play(); }
+    }
+  );
 
   useEffect(() => {
     if (!story) return;
     storiesApi.view(story._id).catch(() => {});
-  }, [story]);
+  }, [story?._id]);
 
   useEffect(() => {
     if (!story || paused) return;
@@ -55,42 +67,48 @@ export default function StoryViewer({ stories = [], initialIndex = 0, onClose })
     else goNext();
   }
 
-  function onLongPressStart() {
-    setPaused(true);
-  }
-
-  function onLongPressEnd() {
-    setPaused(false);
-  }
-
   if (!story) return null;
   const author = story.authorId || {};
-  const media = story.media?.url;
 
   return (
     <View style={styles.root}>
-      {/* background */}
-      {story.type === 'image' || story.type === 'video' ? (
-        <Image source={{ uri: media }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      {/* Background */}
+      {story.type === 'image' && story.media?.url ? (
+        <Image source={{ uri: story.media.url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      ) : story.type === 'video' && story.media?.url ? (
+        <VideoView
+          style={StyleSheet.absoluteFill}
+          player={player}
+          contentFit="cover"
+          nativeControls={false}
+        />
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: story.textStyle?.background || '#2563EB' }]} />
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: story.textStyle?.background || '#2563EB' },
+          ]}
+        />
       )}
 
-      {/* dark overlay for readability */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.15)' }]} pointerEvents="none" />
+      <View
+        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.12)' }]}
+        pointerEvents="none"
+      />
 
-      {/* tap zones */}
+      {/* Tap zones */}
       <TouchableOpacity
         style={StyleSheet.absoluteFill}
         activeOpacity={1}
         onPress={onPressZone}
-        onLongPress={onLongPressStart}
-        onPressOut={onLongPressEnd}
+        onLongPress={() => setPaused(true)}
+        onPressOut={() => setPaused(false)}
         delayLongPress={250}
       />
 
-      {/* top bar */}
+      {/* Top bar */}
       <SafeAreaView edges={['top']} style={styles.topSafe} pointerEvents="box-none">
+        {/* Progress bars */}
         <View style={styles.progressRow}>
           {stories.map((_, i) => (
             <View
@@ -109,40 +127,68 @@ export default function StoryViewer({ stories = [], initialIndex = 0, onClose })
           ))}
         </View>
 
+        {/* Author row */}
         <View style={styles.headerRow}>
-          <Avatar uri={author.profilePicture} name={author.fullName} size={36} />
-          <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={styles.name}>{author.fullName || author.username}</Text>
-            <Text style={styles.time}>{timeAgo(story.createdAt)}</Text>
+          <View style={styles.headerLeft}>
+            {author.profilePicture ? (
+              <Image source={{ uri: author.profilePicture }} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, { backgroundColor: colors.purple, alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>
+                  {(author.fullName || author.username || '?').slice(0, 1)}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.headerName}>@{author.username || 'user'}</Text>
+            <Text style={styles.headerTime}>{timeAgo(story.createdAt)}</Text>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={{ color: '#fff', fontSize: 26, lineHeight: 26 }}>×</Text>
+
+          <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      {/* text story */}
-      {story.type === 'text' ? (
+      {/* Stickers + text */}
+      {story.stickers?.map((s, i) => (
+        <Text key={i} style={[styles.sticker, { left: s.x, top: s.y }]}>
+          {s.emoji}
+        </Text>
+      ))}
+
+      {story.type === 'text' && story.text ? (
         <View style={styles.textWrap} pointerEvents="none">
           <Text style={styles.textBig}>{story.text}</Text>
         </View>
       ) : null}
 
-      {/* footer input */}
+      {/* Bottom reply bar */}
       <SafeAreaView edges={['bottom']} style={styles.bottomSafe} pointerEvents="box-none">
-        <View style={styles.replyRow}>
-          <View style={styles.replyInput}>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-              Reply to {author.username || 'story'}…
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.replyRow}>
+            <TextInput
+              value={reply}
+              onChangeText={setReply}
+              placeholder={`Reply to ${author.username || 'story'}…`}
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              style={styles.replyInput}
+              onSubmitEditing={() => {
+                if (!reply.trim()) return;
+                // Replies go as a DM — wire when ready
+                setReply('');
+                goNext();
+              }}
+            />
+            <TouchableOpacity style={styles.reactBtn} onPress={() => storiesApi.react(story._id, '❤️').catch(() => {})}>
+              <Text style={{ fontSize: 24 }}>❤️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.reactBtn} onPress={() => storiesApi.react(story._id, '🔥').catch(() => {})}>
+              <Text style={{ fontSize: 24 }}>🔥</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.reactBtn}>
-            <Text style={{ fontSize: 22 }}>❤️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.reactBtn}>
-            <Text style={{ fontSize: 22 }}>🔥</Text>
-          </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
 
       {paused ? (
@@ -160,24 +206,48 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', gap: 4, marginTop: 6 },
   progressTrack: { flex: 1, height: 3, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#fff' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
-  name: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  time: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerAvatar: { width: 34, height: 34, borderRadius: 17 },
+  headerName: { color: '#fff', fontWeight: '800', fontSize: 14, marginLeft: 10 },
+  headerTime: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginLeft: 8 },
+
+  sticker: { position: 'absolute', fontSize: 38 },
   textWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
-  textBig: { color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center', lineHeight: 38 },
+  textBig: { color: '#fff', fontSize: 30, fontWeight: '900', textAlign: 'center', lineHeight: 40 },
+
   bottomSafe: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 },
   replyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   replyInput: {
-    flex: 1, height: 44, borderRadius: 22, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)', justifyContent: 'center', paddingHorizontal: 16,
+    flex: 1,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    paddingHorizontal: 16,
+    color: '#fff',
+    fontSize: 14,
   },
   reactBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pauseBadge: {
-    position: 'absolute', top: 80, alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 20,
+    position: 'absolute',
+    top: 100,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    borderRadius: 20,
   },
 });
