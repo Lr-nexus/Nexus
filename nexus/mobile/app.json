@@ -6,14 +6,7 @@
     "orientation": "portrait",
     "scheme": "nova",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "backgroundColor": "#080B18",
-      "resizeMode": "contain"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexus.nova",
@@ -26,33 +19,17 @@
     },
     "android": {
       "package": "com.nexus.nova",
-      "adaptiveIcon": {
-        "backgroundColor": "#080B18"
-      },
       "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "ACCESS_FINE_LOCATION",
-        "POST_NOTIFICATIONS"
+        "CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
       "expo-secure-store",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Nova needs access to your photos."
-        }
-      ],
-      "expo-asset",
-      "expo-font"
+      ["expo-image-picker", { "photosPermission": "Nova needs access to your photos." }]
     ],
     "extra": {
-      "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
-      }
+      "eas": { "projectId": "00000000-0000-0000-0000-000000000000" }
     }
   }
 }

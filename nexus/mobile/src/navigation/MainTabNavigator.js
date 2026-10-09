@@ -17,10 +17,13 @@ function EmptyCreateScreen() {
   return <View />;
 }
 
-function CreateTabButton({ onPress }) {
-  const { colors } = useTheme();
+function CreateTabButton({ onPress, colors }) {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.createBtn, { backgroundColor: colors.nexusBlue }]} activeOpacity={0.85}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.createBtn, { backgroundColor: colors.nexusBlue }]}
+      activeOpacity={0.85}
+    >
       <Ionicons name="add" size={30} color="#fff" />
     </TouchableOpacity>
   );
@@ -77,14 +80,11 @@ export default function MainTabNavigator({ navigation }) {
         options={{
           title: '',
           tabBarButton: () => (
-            <CreateTabButton onPress={() => navigation.navigate('CreatePost')} />
+            <CreateTabButton
+              colors={colors}
+              onPress={() => navigation.navigate('HomeTab', { screen: 'CreatePost' })}
+            />
           ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('CreatePost');
-          },
         }}
       />
       <Tabs.Screen
