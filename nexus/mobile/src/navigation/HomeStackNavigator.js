@@ -33,6 +33,7 @@ export default function HomeStackNavigator() {
 
       <Stack.Screen name={ROUTES.NOVA_AI_CHAT} component={Screens.NovaAIChat} />
       <Stack.Screen name={ROUTES.CALL_HISTORY} component={Screens.CallHistory} />
+      <Stack.Screen name="ImageEditor" component={Screens.ImageEditor} options={modalScreenOptions}/>
     </Stack.Navigator>
   );
 }

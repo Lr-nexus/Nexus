@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  View, Text, FlatList, StyleSheet, KeyboardAvoidingView, Platform,
+  Alert, ActivityIndicator, TouchableOpacity, Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -19,14 +20,32 @@ import BottomSheet from '../../components/common/BottomSheet';
 import { ROUTES } from '../../constants/routes';
 import { pickImage, pickVideo } from '../../utils/media';
 
+function dedupeMessages(list) {
+  // Keep last occurrence per _id, preserving order
+  const seen = new Map();
+  const result = [];
+  for (const m of list) {
+    const key = m._id || m.__optimistic;
+    if (seen.has(key)) {
+      const idx = seen.get(key);
+      result[idx] = m;
+    } else {
+      seen.set(key, result.length);
+      result.push(m);
+    }
+  }
+  return result;
+}
+
 export default function ChatScreen({ route }) {
   const { conversation: initial } = route.params || {};
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
-  const { socket, emit, on, connected } = useSocket();
+  const { emit, on } = useSocket();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
-  const [conversation] = useState(initial);
+  const [conversation, setConversation] = useState(initial);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -38,13 +57,16 @@ export default function ChatScreen({ route }) {
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const seenIdsRef = useRef(new Set());
 
   const load = useCallback(async () => {
     if (!conversation?._id) return;
     setLoading(true);
     try {
       const res = await conversationsApi.messages(conversation._id, { limit: 50 });
-      setMessages(res.messages || []);
+      const clean = (res.messages || []).filter((m) => m._id);
+      seenIdsRef.current = new Set(clean.map((m) => m._id));
+      setMessages(clean);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 80);
     } catch (e) {
       Alert.alert('Could not load messages', e?.response?.data?.message || 'Try again.');
@@ -53,9 +75,7 @@ export default function ChatScreen({ route }) {
     }
   }, [conversation]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     if (!conversation?._id) return;
@@ -63,15 +83,37 @@ export default function ChatScreen({ route }) {
     return () => emit('conversation:leave', conversation._id);
   }, [conversation, emit]);
 
+  // Socket listeners
   useEffect(() => {
     if (!conversation?._id) return;
 
     const offNew = on('message:new', (m) => {
       if (m.conversationId !== conversation._id) return;
+
+      // Replace optimistic if same content from me, or skip if already seen
       setMessages((prev) => {
-        if (prev.find((x) => x._id === m._id)) return prev;
-        return [...prev, m];
+        let next;
+        if (m.senderId === user?.id) {
+          const optimisticIdx = prev.findIndex(
+            (x) => x.__optimistic && x.content === m.content && x.type === m.type
+          );
+          if (optimisticIdx >= 0) {
+            next = [...prev];
+            next[optimisticIdx] = m;
+          } else if (!seenIdsRef.current.has(m._id)) {
+            next = [...prev, m];
+          } else {
+            return prev;
+          }
+        } else if (!seenIdsRef.current.has(m._id)) {
+          next = [...prev, m];
+        } else {
+          return prev;
+        }
+        seenIdsRef.current.add(m._id);
+        return dedupeMessages(next);
       });
+
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     });
 
@@ -83,18 +125,45 @@ export default function ChatScreen({ route }) {
 
     const offReaction = on('message:reaction', ({ messageId, reactions }) => {
       setMessages((prev) =>
-        prev.map((m) => (m._id === messageId ? { ...m, reactions } : m))
+        dedupeMessages(prev.map((m) => (m._id === messageId ? { ...m, reactions } : m)))
       );
     });
 
     const offRead = on('message:read', ({ messageId, userId }) => {
       setMessages((prev) =>
-        prev.map((m) =>
-          m._id === messageId
-            ? { ...m, readBy: [...(m.readBy || []), userId] }
-            : m
+        dedupeMessages(
+          prev.map((m) =>
+            m._id === messageId
+              ? { ...m, readBy: [...new Set([...(m.readBy || []), userId])] }
+              : m
+          )
         )
       );
+    });
+
+    // Presence updates
+    const offOnline = on('user:online', ({ userId }) => {
+      setConversation((c) => {
+        if (!c) return c;
+        return {
+          ...c,
+          participants: c.participants.map((p) =>
+            String(p._id) === String(userId) ? { ...p, isOnline: true } : p
+          ),
+        };
+      });
+    });
+
+    const offOffline = on('user:offline', ({ userId }) => {
+      setConversation((c) => {
+        if (!c) return c;
+        return {
+          ...c,
+          participants: c.participants.map((p) =>
+            String(p._id) === String(userId) ? { ...p, isOnline: false } : p
+          ),
+        };
+      });
     });
 
     return () => {
@@ -102,10 +171,11 @@ export default function ChatScreen({ route }) {
       offTyping?.();
       offReaction?.();
       offRead?.();
+      offOnline?.();
+      offOffline?.();
     };
   }, [conversation, on, user?.id]);
 
-  // typing emit with debounce
   const onInputTyping = useCallback(() => {
     if (!conversation?._id) return;
     emit('message:typing', { conversationId: conversation._id, isTyping: true });
@@ -118,16 +188,17 @@ export default function ChatScreen({ route }) {
   async function sendText(text) {
     if (!text.trim()) return;
     setSending(true);
+
     const optimistic = {
-      _id: `tmp-${Date.now()}`,
+      _id: `tmp-${Date.now()}-${Math.random()}`,
+      __optimistic: true,
       conversationId: conversation._id,
       senderId: user?.id,
       type: 'text',
       content: text,
       createdAt: new Date().toISOString(),
-      __optimistic: true,
     };
-    setMessages((prev) => [...prev, optimistic]);
+    setMessages((prev) => dedupeMessages([...prev, optimistic]));
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 30);
 
     try {
@@ -135,8 +206,11 @@ export default function ChatScreen({ route }) {
         content: text,
         type: 'text',
       });
+      seenIdsRef.current.add(res.message._id);
       setMessages((prev) =>
-        prev.map((m) => (m._id === optimistic._id ? res.message : m))
+        dedupeMessages(
+          prev.map((m) => (m._id === optimistic._id ? res.message : m))
+        )
       );
     } catch (e) {
       setMessages((prev) =>
@@ -167,7 +241,8 @@ export default function ChatScreen({ route }) {
         type: kind,
         media: { url: up.url, publicId: up.publicId, mimeType: asset.mimeType || kind },
       });
-      setMessages((prev) => [...prev, res.message]);
+      seenIdsRef.current.add(res.message._id);
+      setMessages((prev) => dedupeMessages([...prev, res.message]));
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     } catch (e) {
       Alert.alert('Upload failed', e?.response?.data?.message || 'Try again.');
@@ -185,13 +260,33 @@ export default function ChatScreen({ route }) {
         type: 'audio',
         media: { url: up.url, publicId: up.publicId, mimeType: 'audio/m4a' },
       });
-      setMessages((prev) => [...prev, res.message]);
+      seenIdsRef.current.add(res.message._id);
+      setMessages((prev) => dedupeMessages([...prev, res.message]));
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 40);
     } catch (e) {
       Alert.alert('Send failed', e?.response?.data?.message || 'Try again.');
     } finally {
       setSending(false);
     }
+  }
+
+  function startCall(type) {
+    const ids = (conversation?.participants || [])
+      .map((p) => String(p._id))
+      .filter((id) => id !== String(user?.id));
+
+    if (ids.length === 0) {
+      return Alert.alert('No participants to call.');
+    }
+
+    // Close keyboard first
+    Keyboard.dismiss();
+
+    navigation.navigate(ROUTES.CALL, {
+      conversation,
+      type,
+      participantIds: ids,
+    });
   }
 
   async function handleMessageAction(kind, payload) {
@@ -206,22 +301,20 @@ export default function ChatScreen({ route }) {
           prev.map((x) => (x._id === m._id ? { ...x, isDeleted: true, content: '' } : x))
         );
       } else if (kind === 'edit') {
-        // simple prompt-style edit — native Alert prompt
         Alert.prompt?.(
           'Edit message',
           '',
           async (value) => {
             if (!value) return;
             const res = await messagesApi.edit(m._id, value);
-            setMessages((prev) => prev.map((x) => (x._id === m._id ? res.message : x)));
+            setMessages((prev) =>
+              prev.map((x) => (x._id === m._id ? res.message : x))
+            );
           },
           'plain-text',
           m.content || ''
         );
-      } else if (kind === 'forward') {
-        Alert.alert('Forward', 'Select a chat to forward to (coming next).');
       } else if (kind === 'copy') {
-        // clipboard — optional dependency; graceful no-op
         try {
           const Clipboard = require('expo-clipboard');
           await Clipboard.setStringAsync(m.content || '');
@@ -245,16 +338,19 @@ export default function ChatScreen({ route }) {
       <ChatHeader
         conversation={conversation}
         currentUserId={user?.id}
-        onBack={() => navigation.goBack()}
+        onBack={() => {
+          Keyboard.dismiss();
+          navigation.goBack();
+        }}
         onInfo={() => navigation.navigate(ROUTES.CHAT_INFO, { conversation })}
-        onCall={() => navigation.navigate(ROUTES.CALL, { conversation, type: 'audio' })}
-        onVideo={() => navigation.navigate(ROUTES.CALL, { conversation, type: 'video' })}
+        onCall={() => startCall('audio')}
+        onVideo={() => startCall('video')}
       />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       >
         {loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -272,7 +368,8 @@ export default function ChatScreen({ route }) {
                 onLongPress={(m) => setActionsFor(m)}
               />
             )}
-            contentContainerStyle={{ paddingVertical: 10 }}
+            contentContainerStyle={{ paddingVertical: 10, paddingBottom: 8 }}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           />
         )}
@@ -300,9 +397,7 @@ export default function ChatScreen({ route }) {
       <MessageActions
         visible={!!actionsFor}
         message={actionsFor}
-        mine={
-          actionsFor?.senderId === user?.id || actionsFor?.senderId?._id === user?.id
-        }
+        mine={actionsFor?.senderId === user?.id || actionsFor?.senderId?._id === user?.id}
         onClose={() => setActionsFor(null)}
         onAction={handleMessageAction}
       />
@@ -314,9 +409,9 @@ export default function ChatScreen({ route }) {
         items={[
           { label: '📷 Photo', onPress: () => sendMedia('image') },
           { label: '🎬 Video', onPress: () => sendMedia('video') },
-          { label: '📄 Document', onPress: () => Alert.alert('Documents', 'Coming next.') },
-          { label: '📍 Location', onPress: () => Alert.alert('Location', 'Coming next.') },
-          { label: '👤 Contact', onPress: () => Alert.alert('Contact', 'Coming next.') },
+          { label: '📄 Document', onPress: () => Alert.alert('Documents', 'Coming soon.') },
+          { label: '📍 Location', onPress: () => Alert.alert('Location', 'Coming soon.') },
+          { label: '👤 Contact', onPress: () => Alert.alert('Contact', 'Coming soon.') },
           { label: '🎙️ Voice message', onPress: () => setVoiceOpen(true) },
         ]}
       />
@@ -332,10 +427,5 @@ export default function ChatScreen({ route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  typing: {
-    fontSize: 11,
-    paddingHorizontal: 14,
-    paddingBottom: 4,
-    fontStyle: 'italic',
-  },
+  typing: { fontSize: 11, paddingHorizontal: 14, paddingBottom: 4, fontStyle: 'italic' },
 });

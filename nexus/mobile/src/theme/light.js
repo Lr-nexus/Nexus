@@ -19,4 +19,6 @@ export const light = {
   bubbleMineText: '#FFFFFF',
   bubbleTheirs: '#FFFFFF',
   bubbleTheirsText: '#0F172A',
+  teal: '#0EA5A4',
+  online: '#22C55E',
 };

@@ -24,6 +24,7 @@ export default function ProfileStackNavigator() {
       <Stack.Screen name={ROUTES.AI_SETTINGS} component={Screens.AISettings} />
       <Stack.Screen name={ROUTES.LOGIN_ACTIVITY} component={Screens.LoginActivity} />
       <Stack.Screen name={ROUTES.ABOUT} component={Screens.About} />
+      <Stack.Screen name={ROUTES.APP_LOCK} component={Screens.AppLock} />
     </Stack.Navigator>
   );
 }

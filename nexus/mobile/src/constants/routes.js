@@ -86,4 +86,7 @@ export const ROUTES = {
   ADMIN_STATS: 'AdminStats',
 
   RESET_PASSWORD: 'ResetPassword',
+  APP_LOCK: 'AppLock',
+  IMAGE_EDITOR: 'ImageEditor',
+  LOCK_SCREEN: 'LockScreen',
 };

@@ -12,16 +12,16 @@ export default function ChatBubble({ message, mine, onLongPress }) {
 
   function renderStatus() {
     if (!mine) return null;
-    const s = message.readBy?.length
+    const tick = message.readBy?.length
       ? '✓✓'
       : message.deliveredTo?.length
       ? '✓✓'
-      : message._id
+      : message._id && !message.__optimistic
       ? '✓'
       : '⏱';
     return (
       <Text style={[styles.status, { color: 'rgba(255,255,255,0.85)' }]}>
-        {s}
+        {tick}
       </Text>
     );
   }
@@ -34,7 +34,7 @@ export default function ChatBubble({ message, mine, onLongPress }) {
             styles.bubble,
             {
               backgroundColor: bubbleBg,
-              borderRadius: radius.lg,
+              borderRadius: radius.xl,
               paddingHorizontal: spacing.md,
               paddingVertical: 8,
             },
@@ -58,7 +58,9 @@ export default function ChatBubble({ message, mine, onLongPress }) {
           styles.bubble,
           {
             backgroundColor: bubbleBg,
-            borderRadius: radius.lg,
+            borderRadius: radius.xl,
+            borderTopLeftRadius: mine ? radius.xl : 6,
+            borderTopRightRadius: mine ? 6 : radius.xl,
           },
         ]}
       >
@@ -66,7 +68,7 @@ export default function ChatBubble({ message, mine, onLongPress }) {
           <View
             style={{
               borderLeftWidth: 3,
-              borderLeftColor: mine ? '#fff8' : colors.nexusBlue,
+              borderLeftColor: mine ? '#ffffff70' : colors.teal,
               paddingLeft: 8,
               marginBottom: 6,
             }}
@@ -88,12 +90,8 @@ export default function ChatBubble({ message, mine, onLongPress }) {
         {message.type === 'video' && message.media?.url ? (
           <View
             style={{
-              width: 220,
-              height: 220,
-              borderRadius: radius.md,
-              backgroundColor: '#000',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 220, height: 220, borderRadius: radius.md,
+              backgroundColor: '#000', alignItems: 'center', justifyContent: 'center',
               marginBottom: 6,
             }}
           >
@@ -102,36 +100,15 @@ export default function ChatBubble({ message, mine, onLongPress }) {
         ) : null}
 
         {message.type === 'audio' && message.media?.url ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 6,
-              gap: 10,
-            }}
-          >
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: 10 }}>
             <Text style={{ fontSize: 22 }}>🎙️</Text>
-            <View
-              style={{
-                height: 4,
-                flex: 1,
-                backgroundColor: mine ? 'rgba(255,255,255,0.35)' : colors.border,
-                borderRadius: 2,
-              }}
-            />
+            <View style={{ height: 4, flex: 1, backgroundColor: mine ? 'rgba(255,255,255,0.35)' : colors.border, borderRadius: 2 }} />
             <Text style={{ color: textColor, fontSize: 12 }}>0:12</Text>
           </View>
         ) : null}
 
         {message.type === 'file' && message.media?.url ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 6,
-            }}
-          >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 }}>
             <Text style={{ fontSize: 24 }}>📄</Text>
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={{ color: textColor, fontWeight: '700', fontSize: 13 }}>
@@ -145,9 +122,7 @@ export default function ChatBubble({ message, mine, onLongPress }) {
         {message.type === 'location' ? (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingVertical: 4 }}>
             <Text style={{ fontSize: 22 }}>📍</Text>
-            <Text style={{ color: textColor, fontWeight: '600', fontSize: 13 }}>
-              Shared location
-            </Text>
+            <Text style={{ color: textColor, fontWeight: '600', fontSize: 13 }}>Shared location</Text>
           </View>
         ) : null}
 
@@ -170,11 +145,9 @@ export default function ChatBubble({ message, mine, onLongPress }) {
         </View>
 
         {message.reactions?.length ? (
-          <View style={[styles.reactionsRow]}>
+          <View style={styles.reactionsRow}>
             {message.reactions.slice(0, 3).map((r, i) => (
-              <Text key={i} style={{ fontSize: 14 }}>
-                {r.emoji}
-              </Text>
+              <Text key={i} style={{ fontSize: 14 }}>{r.emoji}</Text>
             ))}
           </View>
         ) : null}
@@ -184,27 +157,18 @@ export default function ChatBubble({ message, mine, onLongPress }) {
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: 10, marginVertical: 3 },
+  row: { paddingHorizontal: 10, marginVertical: 2 },
   mineRow: { alignItems: 'flex-end' },
   theirsRow: { alignItems: 'flex-start' },
-  bubble: { maxWidth: '80%', paddingHorizontal: 12, paddingVertical: 8 },
+  bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 9 },
   metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 2,
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',
+    marginTop: 4, gap: 2,
   },
   status: { fontSize: 10, marginLeft: 2 },
   reactionsRow: {
-    flexDirection: 'row',
-    gap: 2,
-    position: 'absolute',
-    bottom: -12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    flexDirection: 'row', gap: 2, position: 'absolute',
+    bottom: -12, right: 12, backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 12, paddingHorizontal: 6, paddingVertical: 1,
   },
 });

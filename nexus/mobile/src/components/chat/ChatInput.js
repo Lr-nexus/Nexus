@@ -1,6 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 import {
-  View, TextInput, TouchableOpacity, StyleSheet, Platform,
+  View, TextInput, TouchableOpacity, Text, StyleSheet, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,52 +24,54 @@ const ChatInput = forwardRef(function ChatInput(
       style={[
         styles.row,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.bg,
           borderTopColor: colors.border,
           paddingHorizontal: spacing.sm,
           paddingVertical: 8,
-          gap: 6,
+          gap: 8,
         },
       ]}
     >
       <TouchableOpacity onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
-        <Ionicons name="add-circle-outline" size={26} color={colors.text} />
+        <Ionicons name="attach" size={24} color={colors.textMuted} />
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onRizz} hitSlop={8} style={styles.iconBtn}>
-        <Ionicons name="flame" size={22} color="#EF4444" />
-      </TouchableOpacity>
-
-      <TextInput
-        ref={ref}
-        value={text}
-        onChangeText={setText}
-        placeholder="Message…"
-        placeholderTextColor={colors.textDim}
-        multiline
+      <View
         style={[
-          styles.input,
+          styles.inputWrap,
           {
-            backgroundColor: colors.bg,
-            color: colors.text,
+            backgroundColor: colors.surface,
             borderRadius: radius.pill,
             borderColor: colors.border,
           },
         ]}
-      />
+      >
+        <TextInput
+          ref={ref}
+          value={text}
+          onChangeText={setText}
+          placeholder="Send Message"
+          placeholderTextColor={colors.textDim}
+          multiline
+          style={[styles.input, { color: colors.text }]}
+        />
+        <TouchableOpacity onPress={onRizz} hitSlop={8} style={styles.rizzBtn}>
+          <Ionicons name="flame" size={20} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
 
       {text.trim() ? (
         <TouchableOpacity
           onPress={send}
           disabled={!canSend}
-          style={[styles.sendBtn, { backgroundColor: colors.nexusBlue, borderRadius: radius.pill }]}
+          style={[styles.sendBtn, { backgroundColor: colors.teal, borderRadius: radius.pill }]}
         >
           <Ionicons name="arrow-up" size={20} color="#fff" />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           onPress={onVoicePress}
-          style={[styles.sendBtn, { backgroundColor: colors.card, borderRadius: radius.pill }]}
+          style={[styles.sendBtn, { backgroundColor: colors.surface, borderRadius: radius.pill }]}
         >
           <Ionicons name="mic-outline" size={20} color={colors.text} />
         </TouchableOpacity>
@@ -83,15 +85,22 @@ export default ChatInput;
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', borderTopWidth: 1 },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  input: {
+  inputWrap: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    paddingHorizontal: 14,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-    fontSize: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    maxHeight: 130,
+    paddingLeft: 16,
+    paddingRight: 6,
     borderWidth: 1,
   },
-  sendBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  input: {
+    flex: 1,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    fontSize: 15,
+    maxHeight: 120,
+  },
+  rizzBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

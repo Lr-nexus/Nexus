@@ -81,10 +81,12 @@ export default function RegisterScreen({ navigation }) {
           <AuthInput label="Date of birth" placeholder="YYYY-MM-DD" value={form.dateOfBirth}
             onChangeText={set('dateOfBirth')} onBlur={blur('dateOfBirth')}
             error={showError('dateOfBirth')} helper="You must be 13 or older." />
-          <AuthInput label="Password" placeholder="At least 8 characters" secureTextEntry
+          <AuthInput label="Password" placeholder="At least 8 characters"
+            secureTextEntry showPasswordToggle
             value={form.password} onChangeText={set('password')} onBlur={blur('password')}
             error={showError('password')} />
-          <AuthInput label="Confirm password" placeholder="Repeat your password" secureTextEntry
+          <AuthInput label="Confirm password" placeholder="Repeat your password"
+            secureTextEntry showPasswordToggle
             value={form.confirmPassword} onChangeText={set('confirmPassword')}
             onBlur={blur('confirmPassword')} error={showError('confirmPassword')} />
 

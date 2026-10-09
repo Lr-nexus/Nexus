@@ -87,20 +87,49 @@ export default function GroupInfoScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-          <Button
-            title="Message group"
-            onPress={() => navigation.navigate('Chat', { conversation: { _id: group.conversationId } })}
-            fullWidth={false}
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="Add members"
-            variant="secondary"
-            onPress={() => navigation.navigate('CreateGroup')}
-            fullWidth={false}
-            style={{ flex: 1 }}
-          />
-        </View>
+  <Button
+    title="Message"
+    onPress={() => navigation.navigate('Chat', { conversation: { _id: group.conversationId } })}
+    fullWidth={false}
+    style={{ flex: 1 }}
+  />
+  <Button
+    title="Voice"
+    variant="secondary"
+    onPress={() =>
+      navigation.navigate('Call', {
+        conversation: { _id: group.conversationId, type: 'group', participants: members.map((m) => m.userId).filter(Boolean) },
+        type: 'audio',
+        participantIds: members.map((m) => String(m.userId?._id)).filter(Boolean),
+      })
+    }
+    fullWidth={false}
+    style={{ flex: 1 }}
+  />
+  <Button
+    title="Video"
+    variant="secondary"
+    onPress={() =>
+      navigation.navigate('Call', {
+        conversation: { _id: group.conversationId, type: 'group', participants: members.map((m) => m.userId).filter(Boolean) },
+        type: 'video',
+        participantIds: members.map((m) => String(m.userId?._id)).filter(Boolean),
+      })
+    }
+    fullWidth={false}
+    style={{ flex: 1 }}
+  />
+</View>
+
+<View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+  <Button
+    title="Add members"
+    variant="secondary"
+    onPress={() => navigation.navigate('CreateGroup')}
+    fullWidth={false}
+    style={{ flex: 1 }}
+  />
+</View>
 
         <Text style={[styles.section, { color: colors.textMuted }]}>Members</Text>
 

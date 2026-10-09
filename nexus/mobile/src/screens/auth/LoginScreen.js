@@ -55,7 +55,7 @@ export default function LoginScreen({ navigation }) {
             value={identifier} onChangeText={(v) => { setIdentifier(v); if (error) setError(null); }}
             returnKeyType="next" />
 
-          <AuthInput label="Password" placeholder="Your password" secureTextEntry
+          <AuthInput label="Password" placeholder="Your password" secureTextEntry showPasswordToggle
             value={password} onChangeText={(v) => { setPassword(v); if (error) setError(null); }}
             onSubmitEditing={submit} returnKeyType="go" />
 

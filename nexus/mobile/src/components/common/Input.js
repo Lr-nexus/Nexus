@@ -1,7 +1,8 @@
 import React, { forwardRef, useState } from 'react';
 import {
-  View, TextInput, Text, StyleSheet, TouchableOpacity, Platform,
+  View, TextInput, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { moderateScale, fontScale } from '../../theme/responsive';
 
@@ -14,6 +15,7 @@ const Input = forwardRef(function Input(
     rightIcon = null,
     onRightIconPress,
     secureTextEntry = false,
+    showPasswordToggle = false,
     multiline = false,
     numberOfLines = 1,
     maxLength,
@@ -25,9 +27,11 @@ const Input = forwardRef(function Input(
 ) {
   const { colors, radius, spacing } = useTheme();
   const [focused, setFocused] = useState(false);
+  const [reveal, setReveal] = useState(false);
 
   const borderColor = error ? colors.danger : focused ? colors.electricBlue : colors.border;
   const baseHeight = moderateScale(52);
+  const showEye = secureTextEntry && showPasswordToggle;
 
   return (
     <View style={[styles.wrap, { marginBottom: spacing.md }, containerStyle]}>
@@ -56,18 +60,12 @@ const Input = forwardRef(function Input(
           ref={ref}
           placeholderTextColor={colors.textDim}
           selectionColor={colors.electricBlue}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={secureTextEntry && !reveal}
           multiline={multiline}
           numberOfLines={numberOfLines}
           maxLength={maxLength}
-          onFocus={(e) => {
-            setFocused(true);
-            rest.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            rest.onBlur?.(e);
-          }}
+          onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
+          onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
           style={[
             styles.input,
             {
@@ -82,7 +80,19 @@ const Input = forwardRef(function Input(
           {...rest}
         />
 
-        {rightIcon ? (
+        {showEye ? (
+          <TouchableOpacity
+            onPress={() => setReveal((v) => !v)}
+            style={styles.iconRight}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name={reveal ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
+        ) : rightIcon ? (
           <TouchableOpacity
             onPress={onRightIconPress}
             style={styles.iconRight}
@@ -95,13 +105,9 @@ const Input = forwardRef(function Input(
       </View>
 
       {error ? (
-        <Text style={[styles.error, { color: colors.danger, fontSize: fontScale(12) }]}>
-          {error}
-        </Text>
+        <Text style={[styles.error, { color: colors.danger, fontSize: fontScale(12) }]}>{error}</Text>
       ) : helper ? (
-        <Text style={[styles.helper, { color: colors.textDim, fontSize: fontScale(12) }]}>
-          {helper}
-        </Text>
+        <Text style={[styles.helper, { color: colors.textDim, fontSize: fontScale(12) }]}>{helper}</Text>
       ) : null}
     </View>
   );

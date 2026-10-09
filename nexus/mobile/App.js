@@ -7,11 +7,15 @@ import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { AppLockProvider, useAppLock } from './src/context/AppLockContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import OfflineBanner from './src/components/common/OfflineBanner';
+import LockScreen from './src/screens/auth/LockScreen';
 
 function ThemedNavigation() {
   const { colors, effective } = useTheme();
+  const { ready, locked } = useAppLock();
+
   const base = effective === 'dark' ? DarkTheme : DefaultTheme;
   const navTheme = {
     ...base,
@@ -25,6 +29,10 @@ function ThemedNavigation() {
       notification: colors.electricBlue,
     },
   };
+
+  if (!ready) return null;
+  if (locked) return <LockScreen />;
+
   return (
     <NavigationContainer theme={navTheme}>
       <OfflineBanner />
@@ -40,11 +48,13 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <SocketProvider>
-              <NotificationProvider>
-                <ThemedNavigation />
-              </NotificationProvider>
-            </SocketProvider>
+            <AppLockProvider>
+              <SocketProvider>
+                <NotificationProvider>
+                  <ThemedNavigation />
+                </NotificationProvider>
+              </SocketProvider>
+            </AppLockProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

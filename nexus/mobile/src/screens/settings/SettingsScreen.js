@@ -21,6 +21,7 @@ const ITEMS = [
   { key: 'login_activity', title: 'Login activity', icon: '📱', route: ROUTES.LOGIN_ACTIVITY },
   { key: 'ai', title: 'AI settings', icon: '🔥', route: ROUTES.AI_SETTINGS },
   { key: 'about', title: 'About Nova', icon: 'ℹ️', route: ROUTES.ABOUT },
+  { key: 'app_lock', title: 'App Lock', icon: '🔐', route: ROUTES.APP_LOCK },
 ];
 
 export default function SettingsScreen() {
