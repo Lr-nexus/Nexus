@@ -10,7 +10,6 @@ function getClient() {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// 503 = overloaded, 429 = rate limited — both worth retrying
 function isRetryable(err) {
   const msg = String(err?.message || '');
   return (
@@ -52,18 +51,13 @@ exports.generate = async (prompt) => {
         return await callModel(model, prompt);
       } catch (e) {
         lastError = e;
-
-        // Non-retryable (bad request, invalid key, etc.) → fail fast
         if (!isRetryable(e)) {
           console.error(`💥 Gemini ${model} fatal:`, e.message);
           if (e instanceof ApiError) throw e;
           throw new ApiError(502, 'Rizz AI is temporarily unavailable.');
         }
-
         console.warn(`⚠️ Gemini ${model} attempt ${attempt} failed: ${e.message.slice(0, 120)}`);
-
         if (attempt < attemptsPerModel) {
-          // 500ms, 1500ms, 3000ms
           await wait(500 * Math.pow(3, attempt - 1));
         }
       }

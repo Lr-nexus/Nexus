@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { groupsApi } from '../../api/groups.api';
-import { usersApi } from '../../api/users.api';
+import { conversationsApi } from '../../api/conversations.api';
+import { uploadService } from '../../services/upload.service';
+import { pickImage } from '../../utils/media';
+import { chatSettings } from '../../services/chatSettings.service';
 import Avatar from '../../components/common/Avatar';
 import Header from '../../components/common/Header';
 import Badge from '../../components/common/Badge';
@@ -19,33 +23,19 @@ export default function ChatInfoScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
-  const { conversation } = route.params || {};
+  const initialConversation = route.params?.conversation;
 
+  const [conversation, setConversation] = useState(initialConversation);
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const isGroup = conversation?.type === 'group';
   const others = (conversation?.participants || []).filter(
     (p) => String(p._id || p) !== String(user?.id)
   );
-
-  useEffect(() => {
-    (async () => {
-      if (isGroup) {
-        // Try to load full group info from API
-        try {
-          // The conversation doesn't have groupId directly; find it via _id
-          const res = await groupsApi.get(conversation._id).catch(() => null);
-          if (res?.group) {
-            setGroup(res.group);
-            setMembers(res.members || []);
-          }
-        } catch {}
-      }
-      setLoading(false);
-    })();
-  }, [conversation, isGroup]);
 
   const title = isGroup
     ? conversation?.name || group?.name || 'Group'
@@ -55,6 +45,25 @@ export default function ChatInfoScreen() {
     ? { fullName: title, profilePicture: conversation?.photo || group?.photo }
     : others[0] || {};
 
+  const load = useCallback(async () => {
+    if (!conversation?._id) return;
+    try {
+      const isMutedNow = await chatSettings.isMuted(conversation._id);
+      setMuted(isMutedNow);
+
+      if (isGroup) {
+        const res = await groupsApi.get(conversation._id).catch(() => null);
+        if (res?.group) {
+          setGroup(res.group);
+          setMembers(res.members || []);
+        }
+      }
+    } catch {}
+    finally { setLoading(false); }
+  }, [conversation?._id, isGroup]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
   function startCall(type) {
     const ids = (conversation?.participants || [])
       .map((p) => String(p._id || p))
@@ -63,41 +72,82 @@ export default function ChatInfoScreen() {
     navigation.navigate(ROUTES.CALL, { conversation, type, participantIds: ids });
   }
 
-  function leaveGroup() {
-    Alert.alert(
-      'Leave group?',
-      'You will no longer receive messages from this group.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (group?._id) await groupsApi.removeMember(group._id, user.id);
-              navigation.popToTop();
-            } catch (e) {
-              Alert.alert('Could not leave', e?.response?.data?.message || 'Try again.');
-            }
-          },
-        },
-      ]
-    );
+  async function toggleMute() {
+    const now = await chatSettings.toggleMuted(conversation._id);
+    setMuted(now);
+    Alert.alert(now ? 'Muted' : 'Unmuted');
   }
 
-  function blockUser() {
-    Alert.alert('Block user?', 'They will no longer be able to message you.', [
+  async function changeWallpaper() {
+    try {
+      const a = await pickImage({ allowsEditing: false, quality: 0.9 });
+      if (!a) return;
+      setUploading(true);
+      const up = await uploadService.uploadImage(a.uri);
+      await chatSettings.setWallpaper(conversation._id, up.url);
+      Alert.alert('Wallpaper set');
+    } catch (e) {
+      Alert.alert('Could not set wallpaper', e?.response?.data?.message || e.message);
+    } finally { setUploading(false); }
+  }
+
+  function clearWallpaper() {
+    Alert.alert('Remove wallpaper?', '', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Block',
+        text: 'Remove',
         style: 'destructive',
-        onPress: () => Alert.alert('Blocked', '(Not yet wired up)'),
+        onPress: async () => {
+          await chatSettings.clearWallpaper(conversation._id);
+          Alert.alert('Wallpaper removed');
+        },
       },
     ]);
   }
 
-  function report() {
-    Alert.alert('Report', 'Report sent to moderators.', [{ text: 'OK' }]);
+  async function changeGroupPhoto() {
+    try {
+      const a = await pickImage({ allowsEditing: true, quality: 0.9, aspect: [1, 1] });
+      if (!a) return;
+      setUploading(true);
+      const up = await uploadService.uploadImage(a.uri);
+      const gid = group?._id || conversation._id;
+      await groupsApi.update(gid, { photo: up.url });
+      setGroup((g) => ({ ...g, photo: up.url }));
+      setConversation((c) => ({ ...c, photo: up.url }));
+    } catch (e) {
+      Alert.alert('Could not update photo', e?.response?.data?.message || 'Try again.');
+    } finally { setUploading(false); }
+  }
+
+  async function toggleLock() {
+    try {
+      const next = !conversation.locked;
+      await conversationsApi.setLocked(conversation._id, next);
+      setConversation((c) => ({ ...c, locked: next }));
+      Alert.alert(next ? 'Chat locked' : 'Chat unlocked');
+    } catch (e) {
+      Alert.alert('Failed', e?.response?.data?.message || 'Try again');
+    }
+  }
+
+  function leaveGroup() {
+    Alert.alert('Leave group?', 'You will no longer receive messages.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const gid = group?._id || conversation._id;
+            await groupsApi.removeMember(gid, user.id);
+            navigation.navigate(ROUTES.CHATS_TAB, { screen: ROUTES.CHATS_LIST });
+          } catch (e) {
+            Alert.alert('Could not leave', e?.response?.data?.message || 'Try again.');
+          }
+        },
+      },
+    ]);
   }
 
   if (!conversation) {
@@ -116,26 +166,33 @@ export default function ChatInfoScreen() {
         onLeftPress={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Hero */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <View style={styles.hero}>
-          <Avatar uri={avatarUser.profilePicture} name={title} size={104} />
+          <TouchableOpacity
+            onPress={isGroup ? changeGroupPhoto : undefined}
+            activeOpacity={isGroup ? 0.85 : 1}
+            disabled={!isGroup || uploading}
+          >
+            <View style={{ position: 'relative' }}>
+              <Avatar uri={avatarUser.profilePicture} name={title} size={104} />
+              {isGroup ? (
+                <View style={[styles.cameraBadge, { backgroundColor: colors.nexusBlue, borderColor: colors.bg }]}>
+                  {uploading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="camera" size={14} color="#fff" />
+                  )}
+                </View>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+
           <Text style={[styles.name, { color: colors.text }]}>{title}</Text>
           {!isGroup && others[0]?.username ? (
-            <Text style={{ color: colors.textMuted, marginTop: 4 }}>
-              @{others[0].username}
-            </Text>
+            <Text style={{ color: colors.textMuted, marginTop: 4 }}>@{others[0].username}</Text>
           ) : null}
           {isGroup && group?.description ? (
-            <Text
-              style={{
-                color: colors.textMuted,
-                marginTop: 10,
-                paddingHorizontal: 24,
-                textAlign: 'center',
-                lineHeight: 20,
-              }}
-            >
+            <Text style={{ color: colors.textMuted, marginTop: 10, paddingHorizontal: 24, textAlign: 'center', lineHeight: 20 }}>
               {group.description}
             </Text>
           ) : null}
@@ -148,54 +205,30 @@ export default function ChatInfoScreen() {
           ) : null}
         </View>
 
-        {/* Quick actions */}
         <View style={styles.actionsRow}>
+          <ActionPill icon="call-outline" label="Voice" onPress={() => startCall('audio')} />
+          <ActionPill icon="videocam-outline" label="Video" onPress={() => startCall('video')} />
+          <ActionPill icon="search-outline" label="Search" onPress={() => navigation.navigate(ROUTES.CHAT_SEARCH, { conversation })} />
           <ActionPill
-            icon="call-outline"
-            label="Voice"
-            onPress={() => startCall('audio')}
-          />
-          <ActionPill
-            icon="videocam-outline"
-            label="Video"
-            onPress={() => startCall('video')}
-          />
-          <ActionPill
-            icon="search-outline"
-            label="Search"
-            onPress={() => Alert.alert('Search in chat', 'Coming soon.')}
-          />
-          <ActionPill
-            icon="moon-outline"
-            label="Mute"
-            onPress={() => Alert.alert('Muted', 'Notifications muted.')}
+            icon={muted ? 'notifications-outline' : 'notifications-off-outline'}
+            label={muted ? 'Unmute' : 'Mute'}
+            onPress={toggleMute}
           />
         </View>
 
-        {/* Members (group only) */}
         {isGroup && members.length > 0 ? (
           <Section title={`Members (${members.length})`} colors={colors} spacing={spacing}>
             {members.map((m) => (
               <TouchableOpacity
                 key={m._id}
-                onPress={() =>
-                  m.userId?._id && navigation.navigate(ROUTES.USER_PROFILE, { userId: m.userId._id })
-                }
+                onPress={() => m.userId?._id && navigation.navigate(ROUTES.USER_PROFILE, { userId: m.userId._id })}
                 style={styles.memberRow}
                 activeOpacity={0.75}
               >
-                <Avatar
-                  uri={m.userId?.profilePicture}
-                  name={m.userId?.fullName}
-                  size={40}
-                />
+                <Avatar uri={m.userId?.profilePicture} name={m.userId?.fullName} size={40} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={{ color: colors.text, fontWeight: '700' }}>
-                    {m.userId?.fullName || 'Member'}
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                    @{m.userId?.username}
-                  </Text>
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>{m.userId?.fullName || 'Member'}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>@{m.userId?.username}</Text>
                 </View>
                 {m.role && m.role !== 'member' ? (
                   <Badge label={m.role.toUpperCase()} variant="primary" size="sm" />
@@ -205,64 +238,39 @@ export default function ChatInfoScreen() {
           </Section>
         ) : null}
 
-        {/* Actions list */}
         <Section title="Options" colors={colors} spacing={spacing}>
           {isGroup ? (
             <OptionRow
               icon="person-add-outline"
               label="Add members"
               colors={colors}
-              onPress={() => navigation.navigate(ROUTES.CREATE_GROUP)}
+              onPress={() => navigation.navigate(ROUTES.ADD_MEMBERS, {
+                groupId: group?._id || conversation._id,
+                existingIds: members.map((m) => String(m.userId?._id)).filter(Boolean),
+              })}
             />
           ) : null}
 
           <OptionRow
-            icon="images-outline"
-            label="Media, links, and docs"
+            icon={conversation.locked ? 'lock-open-outline' : 'lock-closed-outline'}
+            label={conversation.locked ? 'Unlock chat' : 'Lock chat'}
             colors={colors}
-            onPress={() => Alert.alert('Media gallery', 'Coming soon.')}
+            onPress={toggleLock}
           />
 
+          <OptionRow icon="image-outline" label="Chat wallpaper" colors={colors} onPress={changeWallpaper} />
+          <OptionRow icon="trash-outline" label="Remove wallpaper" colors={colors} onPress={clearWallpaper} />
+          <OptionRow icon="images-outline" label="Media, links, and docs" colors={colors} onPress={() => Alert.alert('Media gallery', 'Coming soon.')} />
           <OptionRow
-            icon="notifications-off-outline"
-            label="Mute notifications"
+            icon={muted ? 'notifications-outline' : 'notifications-off-outline'}
+            label={muted ? 'Unmute notifications' : 'Mute notifications'}
             colors={colors}
-            onPress={() => Alert.alert('Muted')}
+            onPress={toggleMute}
           />
-
-          <OptionRow
-            icon="color-palette-outline"
-            label="Chat wallpaper"
-            colors={colors}
-            onPress={() => Alert.alert('Wallpaper', 'Coming soon.')}
-          />
-
-          {!isGroup ? (
-            <OptionRow
-              icon="person-remove-outline"
-              label="Block user"
-              colors={colors}
-              destructive
-              onPress={blockUser}
-            />
-          ) : null}
-
-          <OptionRow
-            icon="flag-outline"
-            label="Report"
-            colors={colors}
-            destructive
-            onPress={report}
-          />
+          <OptionRow icon="flag-outline" label="Report" colors={colors} destructive onPress={() => Alert.alert('Reported')} />
 
           {isGroup ? (
-            <OptionRow
-              icon="exit-outline"
-              label="Leave group"
-              colors={colors}
-              destructive
-              onPress={leaveGroup}
-            />
+            <OptionRow icon="exit-outline" label="Leave group" colors={colors} destructive onPress={leaveGroup} />
           ) : null}
         </Section>
       </ScrollView>
@@ -270,21 +278,10 @@ export default function ChatInfoScreen() {
   );
 }
 
-/* ── Sub-components ── */
-
 function Section({ title, children, colors, spacing }) {
   return (
     <View style={{ marginTop: 24 }}>
-      <Text
-        style={{
-          color: colors.textMuted,
-          fontSize: 11,
-          fontWeight: '800',
-          letterSpacing: 0.6,
-          paddingHorizontal: spacing.md,
-          marginBottom: 8,
-        }}
-      >
+      <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 0.6, paddingHorizontal: spacing.md, marginBottom: 8 }}>
         {title.toUpperCase()}
       </Text>
       <View style={{ paddingHorizontal: spacing.md }}>{children}</View>
@@ -297,20 +294,11 @@ function ActionPill({ icon, label, onPress }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[
-        styles.actionPill,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          borderRadius: radius.md,
-        },
-      ]}
+      style={[styles.actionPill, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.md }]}
       activeOpacity={0.85}
     >
       <Ionicons name={icon} size={22} color={colors.electricBlue} />
-      <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, marginTop: 6 }}>
-        {label}
-      </Text>
+      <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, marginTop: 6 }}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -318,20 +306,8 @@ function ActionPill({ icon, label, onPress }) {
 function OptionRow({ icon, label, onPress, colors, destructive }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.optionRow} activeOpacity={0.75}>
-      <Ionicons
-        name={icon}
-        size={20}
-        color={destructive ? colors.danger : colors.text}
-      />
-      <Text
-        style={{
-          color: destructive ? colors.danger : colors.text,
-          fontWeight: '600',
-          fontSize: 14,
-          marginLeft: 14,
-          flex: 1,
-        }}
-      >
+      <Ionicons name={icon} size={20} color={destructive ? colors.danger : colors.text} />
+      <Text style={{ color: destructive ? colors.danger : colors.text, fontWeight: '600', fontSize: 14, marginLeft: 14, flex: 1 }}>
         {label}
       </Text>
       <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
@@ -343,27 +319,13 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   hero: { alignItems: 'center', paddingVertical: 24 },
   name: { fontSize: 22, fontWeight: '800', marginTop: 12 },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    marginTop: 8,
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 3,
   },
-  actionPill: {
-    width: 78,
-    height: 78,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
+  actionsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, marginTop: 8 },
+  actionPill: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
 });

@@ -43,7 +43,10 @@ exports.create = asyncHandler(async (req, res) => {
     participants: [req.user._id, participantId],
   });
 
-  const populated = await convo.populate('participants', 'fullName username profilePicture lastSeenAt');
+  const populated = await convo.populate(
+    'participants',
+    'fullName username profilePicture lastSeenAt'
+  );
   created(res, { conversation: decorate(populated, onlineSet) });
 });
 
@@ -82,7 +85,6 @@ exports.send = asyncHandler(async (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    // Emit to conversation room AND each participant's user room
     io.to(`conversation:${id}`).emit('message:new', msg);
     convo.participants.forEach((pid) => {
       if (!pid.equals(req.user._id)) {
@@ -92,4 +94,15 @@ exports.send = asyncHandler(async (req, res) => {
   }
 
   created(res, { message: msg });
+});
+
+exports.setLocked = asyncHandler(async (req, res) => {
+  const { locked } = req.body;
+  const convo = await Conversation.findById(req.params.id);
+  if (!convo) throw new ApiError(404, 'Conversation not found.');
+  if (!convo.participants.some((p) => p.equals(req.user._id)))
+    throw new ApiError(403, 'Not allowed.');
+  convo.locked = !!locked;
+  await convo.save();
+  ok(res, { conversation: convo });
 });

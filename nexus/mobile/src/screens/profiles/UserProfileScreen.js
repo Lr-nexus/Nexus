@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { usersApi } from '../../api/users.api';
 import { postsApi } from '../../api/posts.api';
@@ -18,7 +19,7 @@ const { width } = Dimensions.get('window');
 const TILE = (width - 6) / 3;
 
 export default function UserProfileScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
   const { userId } = route.params || {};
@@ -32,10 +33,10 @@ export default function UserProfileScreen() {
     try {
       const [u, p] = await Promise.all([
         usersApi.get(userId),
-        postsApi.feed({ limit: 30 }),
+        postsApi.byUser(userId, { limit: 30 }),
       ]);
       setUser(u.user);
-      setPosts((p.posts || []).filter((x) => x.authorId?._id === userId));
+      setPosts(p.posts || []);
     } catch {} finally { setLoading(false); }
   }, [userId]);
 
@@ -45,7 +46,9 @@ export default function UserProfileScreen() {
     try {
       const res = await conversationsApi.create(userId);
       navigation.navigate(ROUTES.CHAT, { conversation: res.conversation });
-    } catch (e) { Alert.alert('Could not open chat', e?.response?.data?.message || 'Try again.'); }
+    } catch (e) {
+      Alert.alert('Could not open chat', e?.response?.data?.message || 'Try again.');
+    }
   }
 
   if (loading) {
@@ -60,7 +63,7 @@ export default function UserProfileScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
       <Header
         title={user?.username || 'Profile'}
-        leftIcon={<Text style={{ color: colors.text, fontSize: 24, lineHeight: 24 }}>‹</Text>}
+        leftIcon={<Ionicons name="chevron-back" size={26} color={colors.text} />}
         onLeftPress={() => navigation.goBack()}
       />
       <FlatList

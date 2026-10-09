@@ -1,16 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, KeyboardAvoidingView, Platform,
-  Alert, ActivityIndicator, Keyboard, TouchableOpacity,
+  Alert, ActivityIndicator, Keyboard, ImageBackground,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { conversationsApi } from '../../api/conversations.api';
 import { messagesApi } from '../../api/messages.api';
 import { uploadService } from '../../services/upload.service';
+import { chatSettings } from '../../services/chatSettings.service';
 import ChatHeader from '../../components/chat/ChatHeader';
 import ChatBubble from '../../components/chat/ChatBubble';
 import ChatInput from '../../components/chat/ChatInput';
@@ -54,7 +55,7 @@ export default function ChatScreen({ route }) {
   const [attachOpen, setAttachOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [rizzOpen, setRizzOpen] = useState(false);
-  const [inputRef = null, setInputRef] = useState(null);
+  const [wallpaper, setWallpaper] = useState(null);
 
   const listRef = useRef(null);
   const innerInputRef = useRef(null);
@@ -64,10 +65,14 @@ export default function ChatScreen({ route }) {
     if (!conversation?._id) return;
     setLoading(true);
     try {
-      const res = await conversationsApi.messages(conversation._id, { limit: 50 });
+      const [res, wp] = await Promise.all([
+        conversationsApi.messages(conversation._id, { limit: 50 }),
+        chatSettings.getWallpaper(conversation._id),
+      ]);
       const clean = (res.messages || []).filter((m) => m._id);
       seenIdsRef.current = new Set(clean.map((m) => m._id));
       setMessages(clean);
+      setWallpaper(wp);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 80);
     } catch (e) {
       Alert.alert('Could not load messages', e?.response?.data?.message || 'Try again.');
@@ -75,6 +80,13 @@ export default function ChatScreen({ route }) {
       setLoading(false);
     }
   }, [conversation]);
+
+  // Reload wallpaper when returning to this screen
+  useFocusEffect(useCallback(() => {
+    if (conversation?._id) {
+      chatSettings.getWallpaper(conversation._id).then(setWallpaper);
+    }
+  }, [conversation?._id]));
 
   useEffect(() => { load(); }, [load]);
 
@@ -172,12 +184,10 @@ export default function ChatScreen({ route }) {
       if (kind === 'image') asset = await pickImage({ allowsEditing: false, quality: 0.85 });
       else asset = await pickVideo();
       if (!asset) return;
-
       setSending(true);
       const up = kind === 'image'
         ? await uploadService.uploadImage(asset.uri)
         : await uploadService.uploadVideo(asset.uri);
-
       const res = await conversationsApi.send(conversation._id, {
         content: '',
         type: kind,
@@ -195,16 +205,12 @@ export default function ChatScreen({ route }) {
     try {
       const doc = await pickDocument();
       if (!doc) return;
-
       setSending(true);
       const up = await uploadService.uploadFile(doc.uri, doc.name, doc.mimeType);
-
       const res = await conversationsApi.send(conversation._id, {
         content: doc.name,
         type: 'file',
-        media: {
-          url: up.url, publicId: up.publicId, mimeType: doc.mimeType, name: doc.name,
-        },
+        media: { url: up.url, publicId: up.publicId, mimeType: doc.mimeType, name: doc.name },
       });
       seenIdsRef.current.add(res.message._id);
       setMessages((prev) => dedupeMessages([...prev, res.message]));
@@ -233,7 +239,7 @@ export default function ChatScreen({ route }) {
 
   function startCall(type) {
     const ids = (conversation?.participants || [])
-      .map((p) => String(p._id))
+      .map((p) => String(p._id || p))
       .filter((id) => id !== String(user?.id));
     if (ids.length === 0) return Alert.alert('No participants to call.');
     Keyboard.dismiss();
@@ -256,7 +262,6 @@ export default function ChatScreen({ route }) {
     }
   }
 
-  // Build context for Rizz: last 3 non-empty contents
   const recentContext = messages
     .filter((m) => m.content)
     .slice(-3)
@@ -270,6 +275,25 @@ export default function ChatScreen({ route }) {
       </SafeAreaView>
     );
   }
+
+  const listContent = (
+    <FlatList
+      ref={listRef}
+      data={messages}
+      keyExtractor={(i) => i._id}
+      renderItem={({ item }) => (
+        <ChatBubble
+          message={item}
+          mine={item.senderId === user?.id || item.senderId?._id === user?.id}
+          onLongPress={(m) => setActionsFor(m)}
+        />
+      )}
+      contentContainerStyle={{ paddingVertical: 10, paddingBottom: 8 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+    />
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -288,28 +312,23 @@ export default function ChatScreen({ route }) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
         enabled
       >
-        {loading ? (
+        {wallpaper ? (
+          <ImageBackground
+            source={{ uri: wallpaper }}
+            style={{ flex: 1 }}
+            imageStyle={{ opacity: 0.35 }}
+          >
+            {loading ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator color={colors.electricBlue} />
+              </View>
+            ) : listContent}
+          </ImageBackground>
+        ) : loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={colors.electricBlue} />
           </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(i) => i._id}
-            renderItem={({ item }) => (
-              <ChatBubble
-                message={item}
-                mine={item.senderId === user?.id || item.senderId?._id === user?.id}
-                onLongPress={(m) => setActionsFor(m)}
-              />
-            )}
-            contentContainerStyle={{ paddingVertical: 10, paddingBottom: 8 }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          />
-        )}
+        ) : listContent}
 
         {typing ? (
           <Text style={[styles.typing, { color: colors.textMuted }]}>typing…</Text>
@@ -328,10 +347,7 @@ export default function ChatScreen({ route }) {
             sending={sending}
             onSend={sendText}
             onAttach={() => setAttachOpen(true)}
-            onRizz={() => {
-              Keyboard.dismiss();
-              setRizzOpen(true);
-            }}
+            onRizz={() => { Keyboard.dismiss(); setRizzOpen(true); }}
             onVoicePress={() => setVoiceOpen(true)}
           />
         )}

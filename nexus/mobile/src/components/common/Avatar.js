@@ -12,6 +12,12 @@ function initialsOf(name = '') {
     .toUpperCase();
 }
 
+function bust(uri) {
+  if (!uri) return uri;
+  const sep = uri.includes('?') ? '&' : '?';
+  return `${uri}${sep}t=${Math.floor(Date.now() / 60000)}`;
+}
+
 export default function Avatar({
   uri,
   name = '',
@@ -20,10 +26,12 @@ export default function Avatar({
   ring = false,
   ringColor,
   style,
+  cacheBust = true,
 }) {
-  const { colors, radius } = useTheme();
+  const { colors } = useTheme();
   const initials = initialsOf(name);
   const Wrapper = onPress ? TouchableOpacity : View;
+  const finalUri = uri ? (cacheBust ? bust(uri) : uri) : null;
 
   return (
     <Wrapper
@@ -42,9 +50,9 @@ export default function Avatar({
         style,
       ]}
     >
-      {uri ? (
+      {finalUri ? (
         <Image
-          source={{ uri }}
+          source={{ uri: finalUri }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
         />
       ) : (

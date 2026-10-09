@@ -2,6 +2,7 @@ const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const SavedPost = require('../models/SavedPost');
 const Hashtag = require('../models/Hashtag');
+const Follow = require('../models/Follow');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { ok, created } = require('../utils/ApiResponse');
@@ -17,9 +18,55 @@ async function touchHashtags(tags) {
   }
 }
 
+// Home feed — posts from people I follow + suggested, NEVER my own
 exports.feed = asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '20', 10), 50);
-  const posts = await Post.find({ visibility: 'public' })
+  const meId = req.user._id;
+
+  const following = await Follow.find({ followerId: meId }).select('followingId');
+  const followingIds = following.map((f) => f.followingId);
+
+  const posts = await Post.find({
+    authorId: { $in: followingIds, $ne: meId },
+    visibility: { $in: ['public', 'followers'] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate('authorId', 'fullName username profilePicture');
+
+  if (posts.length < limit) {
+    const excludeIds = [
+      meId,
+      ...followingIds,
+      ...posts.map((p) => p.authorId?._id || p.authorId),
+    ];
+    const fill = await Post.find({
+      authorId: { $nin: excludeIds },
+      visibility: 'public',
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit - posts.length)
+      .populate('authorId', 'fullName username profilePicture');
+    posts.push(...fill);
+  }
+
+  ok(res, { posts });
+});
+
+// My posts — for profile
+exports.mine = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || '30', 10), 100);
+  const posts = await Post.find({ authorId: req.user._id })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate('authorId', 'fullName username profilePicture');
+  ok(res, { posts });
+});
+
+// Another user's posts
+exports.byUser = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || '30', 10), 100);
+  const posts = await Post.find({ authorId: req.params.userId })
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('authorId', 'fullName username profilePicture');
@@ -36,7 +83,15 @@ exports.getOne = asyncHandler(async (req, res) => {
 });
 
 exports.create = asyncHandler(async (req, res) => {
-  const { type, caption = '', media = [], hashtags = [], location = '', visibility = 'public' } = req.body;
+  const {
+    type,
+    caption = '',
+    media = [],
+    hashtags = [],
+    location = '',
+    visibility = 'public',
+  } = req.body;
+
   const post = await Post.create({
     authorId: req.user._id,
     type: type || (media.length ? 'image' : 'text'),

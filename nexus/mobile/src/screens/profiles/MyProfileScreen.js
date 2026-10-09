@@ -8,7 +8,6 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { postsApi } from '../../api/posts.api';
-import { usersApi } from '../../api/users.api';
 import ProfileHeader from '../../components/profile/ProfileHeader';
 import EmptyState from '../../components/common/EmptyState';
 import { ROUTES } from '../../constants/routes';
@@ -28,10 +27,10 @@ export default function MyProfileScreen() {
   const load = useCallback(async () => {
     try {
       await refreshUser();
-      const res = await postsApi.feed({ limit: 30 });
-      setPosts((res.posts || []).filter((p) => p.authorId?._id === user?.id));
+      const res = await postsApi.mine({ limit: 50 });
+      setPosts(res.posts || []);
     } catch {} finally { setLoading(false); setRefreshing(false); }
-  }, [refreshUser, user?.id]);
+  }, [refreshUser]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -66,7 +65,7 @@ export default function MyProfileScreen() {
             <EmptyState
               emoji="🌱"
               title="No posts yet"
-              subtitle="Share your first post on Nexus."
+              subtitle="Share your first post on Nova."
               actionLabel="Create post"
               onAction={() => navigation.navigate(ROUTES.CREATE_POST)}
               compact

@@ -27,6 +27,7 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
     : 'No messages yet';
 
   const unread = item.unreadCount || 0;
+  const isLocked = !!item.locked;
 
   return (
     <TouchableOpacity
@@ -67,11 +68,11 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
             {preview}
           </Text>
           {unread > 0 ? (
-            <View
-              style={[styles.unreadPill, { backgroundColor: colors.nexusBlue }]}
-            >
+            <View style={[styles.unreadPill, { backgroundColor: colors.nexusBlue }]}>
               <Text style={styles.unreadTxt}>{unread > 99 ? '99+' : unread}</Text>
             </View>
+          ) : isLocked ? (
+            <Ionicons name="lock-closed" size={14} color={colors.textDim} />
           ) : (
             <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
           )}
@@ -83,11 +84,7 @@ export default function ChatListItem({ item, onPress, currentUserId }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  line: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   name: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
   time: { fontSize: 11 },
   preview: { fontSize: 13, marginTop: 2 },

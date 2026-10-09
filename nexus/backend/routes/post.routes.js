@@ -5,6 +5,8 @@ const { requireAuth } = require('../middleware/auth.middleware');
 router.use(requireAuth);
 
 router.get('/', ctrl.feed);
+router.get('/mine', ctrl.mine);
+router.get('/user/:userId', ctrl.byUser);
 router.post('/', ctrl.create);
 
 router.get('/:id', ctrl.getOne);

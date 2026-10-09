@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../common/Avatar';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -11,7 +12,7 @@ export default function StoryCircle({
   onPress,
   onAddPress,
 }) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
   const displayName = user?.username || user?.fullName?.split(' ')[0] || 'You';
 
   return (
@@ -38,14 +39,11 @@ export default function StoryCircle({
             onPress={onAddPress}
             activeOpacity={0.85}
           >
-            <Text style={styles.addPlus}>+</Text>
+            <Ionicons name="add" size={14} color="#fff" />
           </TouchableOpacity>
         ) : null}
       </View>
-      <Text
-        numberOfLines={1}
-        style={[styles.name, { color: colors.textMuted }]}
-      >
+      <Text numberOfLines={1} style={[styles.name, { color: colors.textMuted }]}>
         {isOwn ? 'Your story' : displayName}
       </Text>
     </TouchableOpacity>
@@ -67,5 +65,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
   },
-  addPlus: { color: '#fff', fontSize: 16, fontWeight: '800', lineHeight: 18 },
 });

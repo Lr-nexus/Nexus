@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, FlatList, RefreshControl, StyleSheet, Alert,
+  View, FlatList, RefreshControl, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { conversationsApi } from '../../api/conversations.api';
+import { secureStorage } from '../../utils/secureStorage';
 import ChatListItem from '../../components/chat/ChatListItem';
 import Header from '../../components/common/Header';
 import EmptyState from '../../components/common/EmptyState';
@@ -30,7 +31,15 @@ export default function ChatsListScreen() {
     setError(null);
     try {
       const res = await conversationsApi.list();
-      setItems(res.conversations || []);
+      const list = res.conversations || [];
+      const visible = [];
+      for (const c of list) {
+        if (!c.locked) { visible.push(c); continue; }
+        const unlocked = await secureStorage.getItem(`nova_chat_unlocked_${c._id}`);
+        if (unlocked === '1') visible.push(c);
+        else visible.push({ ...c, __locked: true });
+      }
+      setItems(visible);
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Failed to load');
     } finally {
@@ -40,6 +49,13 @@ export default function ChatsListScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  function openChat(item) {
+    if (item.__locked) {
+      return navigation.navigate(ROUTES.CHAT_LOCK, { conversation: item });
+    }
+    navigation.navigate(ROUTES.CHAT, { conversation: item });
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -71,7 +87,7 @@ export default function ChatsListScreen() {
             <ChatListItem
               item={item}
               currentUserId={user?.id}
-              onPress={() => navigation.navigate(ROUTES.CHAT, { conversation: item })}
+              onPress={() => openChat(item)}
             />
           )}
           ListEmptyComponent={
@@ -100,14 +116,8 @@ export default function ChatsListScreen() {
         onClose={() => setComposeOpen(false)}
         title="Start something new"
         items={[
-          {
-            label: '💬  New chat',
-            onPress: () => navigation.navigate(ROUTES.NEW_CHAT),
-          },
-          {
-            label: '👥  New group',
-            onPress: () => navigation.navigate(ROUTES.CREATE_GROUP),
-          },
+          { label: '💬  New chat', onPress: () => navigation.navigate(ROUTES.NEW_CHAT) },
+          { label: '👥  New group', onPress: () => navigation.navigate(ROUTES.CREATE_GROUP) },
         ]}
       />
     </SafeAreaView>

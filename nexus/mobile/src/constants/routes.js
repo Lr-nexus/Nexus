@@ -1,5 +1,5 @@
 export const ROUTES = {
-  // ── Auth ────────────────────────────────────────────────
+  // Auth
   WELCOME: 'Welcome',
   ONBOARDING: 'Onboarding',
   LOGIN: 'Login',
@@ -9,53 +9,56 @@ export const ROUTES = {
   RESET_PASSWORD: 'ResetPassword',
   LOCK_SCREEN: 'LockScreen',
 
-  // ── Main tabs ───────────────────────────────────────────
+  // Main tabs
   HOME_TAB: 'HomeTab',
   CHATS_TAB: 'ChatsTab',
   CREATE_TAB: 'CreateTab',
   RIZZ_TAB: 'RizzTab',
   PROFILE_TAB: 'ProfileTab',
 
-  // ── Home ────────────────────────────────────────────────
+  // Home
   HOME: 'Home',
 
-  // ── Chat ────────────────────────────────────────────────
+  // Chat
   CHATS_LIST: 'ChatsList',
   CHAT: 'Chat',
   NEW_CHAT: 'NewChat',
   CHAT_INFO: 'ChatInfo',
+  CHAT_SEARCH: 'ChatSearch',
+  CHAT_LOCK: 'ChatLock',
   CONTACT_PICKER: 'ContactPicker',
   LOCATION_SHARE: 'LocationShare',
 
-  // ── Posts ───────────────────────────────────────────────
+  // Posts
   CREATE_POST: 'CreatePost',
   POST_DETAIL: 'PostDetail',
   IMAGE_EDITOR: 'ImageEditor',
 
-  // ── Stories ─────────────────────────────────────────────
+  // Stories
   CREATE_STORY: 'CreateStory',
   STORY_VIEW: 'StoryView',
   STORIES_FEED: 'StoriesFeed',
 
-  // ── Vibes ───────────────────────────────────────────────
+  // Vibes
   VIBES: 'Vibes',
   CREATE_VIBE: 'CreateVibe',
 
-  // ── Explore / Search ────────────────────────────────────
+  // Explore / Search
   EXPLORE: 'Explore',
   SEARCH: 'Search',
   HASHTAG: 'Hashtag',
 
-  // ── Profiles ────────────────────────────────────────────
+  // Profiles
   MY_PROFILE: 'MyProfile',
   USER_PROFILE: 'UserProfile',
   EDIT_PROFILE: 'EditProfile',
   FOLLOWERS: 'Followers',
   FOLLOWING: 'Following',
 
-  // ── Groups / Communities / Channels / Polls ─────────────
+  // Groups / Communities / Channels
   CREATE_GROUP: 'CreateGroup',
   GROUP_INFO: 'GroupInfo',
+  ADD_MEMBERS: 'AddMembers',
   COMMUNITIES: 'Communities',
   COMMUNITY: 'Community',
   CREATE_COMMUNITY: 'CreateCommunity',
@@ -64,15 +67,15 @@ export const ROUTES = {
   CREATE_CHANNEL: 'CreateChannel',
   CREATE_POLL: 'CreatePoll',
 
-  // ── Calls ───────────────────────────────────────────────
+  // Calls
   CALL: 'Call',
   INCOMING_CALL: 'IncomingCall',
   CALL_HISTORY: 'CallHistory',
 
-  // ── Notifications ───────────────────────────────────────
+  // Notifications
   NOTIFICATIONS: 'Notifications',
 
-  // ── Rizz AI ─────────────────────────────────────────────
+  // Rizz AI
   RIZZ_HOME: 'RizzHome',
   RIZZ_CHAT: 'RizzChat',
   RIZZ_HISTORY: 'RizzHistory',
@@ -80,11 +83,11 @@ export const ROUTES = {
   RIZZ_SETTINGS: 'RizzSettings',
   RIZZ_SCREENSHOT: 'RizzScreenshot',
 
-  // ── Nova AI ─────────────────────────────────────────────
+  // Nova AI
   NOVA_AI_HOME: 'NovaAIHome',
   NOVA_AI_CHAT: 'NovaAIChat',
 
-  // ── Settings ────────────────────────────────────────────
+  // Settings
   SETTINGS: 'Settings',
   PRIVACY_SETTINGS: 'PrivacySettings',
   NOTIFICATION_SETTINGS: 'NotificationSettings',
@@ -96,7 +99,7 @@ export const ROUTES = {
   APP_LOCK: 'AppLock',
   ABOUT: 'About',
 
-  // ── Admin ───────────────────────────────────────────────
+  // Admin
   ADMIN_DASHBOARD: 'AdminDashboard',
   ADMIN_USERS: 'AdminUsers',
   ADMIN_REPORTS: 'AdminReports',
