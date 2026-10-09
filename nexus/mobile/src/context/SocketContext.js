@@ -16,15 +16,21 @@ export function SocketProvider({ children }) {
       setConnected(false);
       return;
     }
+
     let mounted = true;
+
     (async () => {
       const s = await connectSocket();
       if (!mounted || !s) return;
       ref.current = s;
+
       s.on('connect', () => setConnected(true));
       s.on('disconnect', () => setConnected(false));
+      s.on('connect_error', () => setConnected(false));
+
       if (s.connected) setConnected(true);
     })();
+
     return () => {
       mounted = false;
     };
@@ -44,7 +50,14 @@ export function SocketProvider({ children }) {
 }
 
 export function useSocket() {
-  return useContext(SocketCtx) || { socket: getSocket(), connected: false, emit: () => {}, on: () => () => {} };
+  return (
+    useContext(SocketCtx) || {
+      socket: getSocket(),
+      connected: false,
+      emit: () => {},
+      on: () => () => {},
+    }
+  );
 }
 
 export default SocketCtx;
