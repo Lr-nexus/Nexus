@@ -83,7 +83,7 @@ export const Screens = {
   ChatsList: safe('ChatsList', () => require('../screens/chat/ChatsListScreen')),
   Chat: safe('Chat', () => require('../screens/chat/ChatScreen')),
   NewChat: safe('NewChat', () => require('../screens/chat/NewChatScreen')),
-  ChatInfo: Missing('ChatInfo'),
+  ChatInfo: safe('ChatInfo', () => require('../screens/chat/ChatInfoScreen')),
   ContactPicker: safe('ContactPicker', () => require('../screens/chat/ContactPickerScreen')),
   LocationShare: safe('LocationShare', () => require('../screens/chat/LocationShareScreen')),
 

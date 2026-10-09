@@ -21,7 +21,15 @@ export default function ChatStackNavigator() {
       <Stack.Screen name={ROUTES.POST_DETAIL} component={Screens.PostDetail} />
       <Stack.Screen name={ROUTES.USER_PROFILE} component={Screens.UserProfile} />
 
-      {/* Modal-style flows */}
+      {/* Group management */}
+      <Stack.Screen
+        name={ROUTES.CREATE_GROUP}
+        component={Screens.CreateGroup}
+        options={modalScreenOptions}
+      />
+      <Stack.Screen name={ROUTES.GROUP_INFO} component={Screens.GroupInfo} />
+
+      {/* Modal flows */}
       <Stack.Screen
         name={ROUTES.CONTACT_PICKER}
         component={Screens.ContactPicker}

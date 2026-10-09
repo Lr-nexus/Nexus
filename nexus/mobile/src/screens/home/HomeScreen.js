@@ -91,12 +91,6 @@ export default function HomeScreen() {
           >
             <Ionicons name="heart-outline" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate(ROUTES.NEW_CHAT)}
-            hitSlop={6}
-          >
-            <Ionicons name="paper-plane-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
         </View>
       </View>
 

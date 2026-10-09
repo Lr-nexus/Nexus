@@ -47,22 +47,34 @@ export default function CreateGroupScreen() {
   }
 
   async function create() {
-    if (!name.trim()) return Alert.alert('Give your group a name');
-    if (selected.length < 1) return Alert.alert('Add at least one member');
+  if (!name.trim()) return Alert.alert('Give your group a name');
+  if (selected.length < 1) return Alert.alert('Add at least one member');
 
-    setCreating(true);
-    try {
-      const res = await groupsApi.create({
-        name: name.trim(),
-        description: description.trim(),
-        memberIds: selected.map((u) => u._id),
-        isPrivate,
+  setCreating(true);
+  try {
+    const res = await groupsApi.create({
+      name: name.trim(),
+      description: description.trim(),
+      memberIds: selected.map((u) => u._id),
+      isPrivate,
+    });
+
+    // Go back to the previous screen (Home or ChatsList)
+    navigation.goBack();
+
+    // Then open the group chat from the ChatsTab stack
+    setTimeout(() => {
+      navigation.navigate('ChatsTab', {
+        screen: 'Chat',
+        params: { conversation: res.conversation },
       });
-      navigation.replace('Chat', { conversation: res.conversation });
-    } catch (e) {
-      Alert.alert('Could not create group', e?.response?.data?.message || 'Try again.');
-    } finally { setCreating(false); }
+    }, 120);
+  } catch (e) {
+    Alert.alert('Could not create group', e?.response?.data?.message || 'Try again.');
+  } finally {
+    setCreating(false);
   }
+}
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
