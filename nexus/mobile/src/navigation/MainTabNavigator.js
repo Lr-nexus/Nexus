@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -17,10 +18,20 @@ function EmptyCreateScreen() {
   return <View />;
 }
 
-function CreateTabButton({ onPress, colors }) {
+/**
+ * Custom "Create" tab button.
+ *
+ * Uses useNavigation() instead of the parent's navigation prop.
+ * This guarantees we get the TAB navigator's navigation object,
+ * which knows about HomeTab, ChatsTab, RizzTab, and ProfileTab.
+ */
+function CreateTabButton() {
+  const navigation = useNavigation();
+  const { colors } = useTheme();
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => navigation.navigate('HomeTab', { screen: 'CreatePost' })}
       style={[styles.createBtn, { backgroundColor: colors.nexusBlue }]}
       activeOpacity={0.85}
     >
@@ -29,7 +40,7 @@ function CreateTabButton({ onPress, colors }) {
   );
 }
 
-export default function MainTabNavigator({ navigation }) {
+export default function MainTabNavigator() {
   const { colors } = useTheme();
   const { unread } = useNotifications();
   const insets = useSafeAreaInsets();
@@ -79,12 +90,7 @@ export default function MainTabNavigator({ navigation }) {
         component={EmptyCreateScreen}
         options={{
           title: '',
-          tabBarButton: () => (
-            <CreateTabButton
-              colors={colors}
-              onPress={() => navigation.navigate('HomeTab', { screen: 'CreatePost' })}
-            />
-          ),
+          tabBarButton: () => <CreateTabButton />,
         }}
       />
       <Tabs.Screen
