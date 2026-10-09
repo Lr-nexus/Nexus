@@ -53,8 +53,36 @@ export default function HomeScreen() {
 
   const header = (
     <>
-      {/* Top bar */}
-      <View style={[styles.topBar, { paddingHorizontal: spacing.md, paddingTop: 8 }]}>
+      {/* ── Dedicated search bar (Instagram-style) ── */}
+      <View style={[styles.topBar, { paddingHorizontal: spacing.md, paddingTop: 4 }]}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate(ROUTES.SEARCH)}
+          activeOpacity={0.85}
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: 12,
+            },
+          ]}
+        >
+          <Ionicons name="search" size={20} color={colors.textMuted} />
+          <Text
+            style={{
+              color: colors.textDim,
+              marginLeft: 10,
+              fontSize: 15,
+              includeFontPadding: false,
+            }}
+          >
+            Search Nova
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Top row (brand + notifications) */}
+      <View style={[styles.topBar, { paddingHorizontal: spacing.md, marginTop: 10 }]}>
         <TouchableOpacity
           onPress={() => navigation.navigate(ROUTES.MY_PROFILE)}
           style={styles.brandRow}
@@ -73,7 +101,10 @@ export default function HomeScreen() {
         <View style={styles.rightIcons}>
           <TouchableOpacity
             onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
-            style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[
+              styles.iconBtn,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
           >
             <Ionicons name="notifications-outline" size={20} color={colors.text} />
           </TouchableOpacity>
@@ -84,7 +115,12 @@ export default function HomeScreen() {
       </View>
 
       {/* Section label */}
-      <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md, marginTop: 18 }]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: colors.text, paddingHorizontal: spacing.md, marginTop: 18 },
+        ]}
+      >
         Your Circle
       </Text>
 
@@ -101,13 +137,17 @@ export default function HomeScreen() {
           <View style={[styles.storyAddCircle, { borderColor: colors.border }]}>
             <Ionicons name="add" size={28} color={colors.text} />
           </View>
-          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>Add Show</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
+            Add Show
+          </Text>
         </TouchableOpacity>
 
         {stories.map((story, idx) => (
           <TouchableOpacity
             key={story._id}
-            onPress={() => navigation.navigate(ROUTES.STORY_VIEW, { stories, initialIndex: idx })}
+            onPress={() =>
+              navigation.navigate(ROUTES.STORY_VIEW, { stories, initialIndex: idx })
+            }
             style={styles.storyItem}
           >
             <Avatar
@@ -129,7 +169,9 @@ export default function HomeScreen() {
 
       {/* Discover */}
       <View style={styles.discoverHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md }]}>
+        <Text
+          style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md }]}
+        >
           Discover
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate(ROUTES.EXPLORE)}>
@@ -139,7 +181,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Discover cards - use feed posts as previews */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -153,7 +194,11 @@ export default function HomeScreen() {
             style={[styles.discoverCard, { borderColor: colors.border }]}
           >
             {p.media?.[0]?.url ? (
-              <Image source={{ uri: p.media[0].url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              <Image
+                source={{ uri: p.media[0].url }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
             ) : (
               <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
             )}
@@ -173,7 +218,12 @@ export default function HomeScreen() {
         ))}
       </ScrollView>
 
-      <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: spacing.md, marginTop: 12 }]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: colors.text, paddingHorizontal: spacing.md, marginTop: 12 },
+        ]}
+      >
         From people you follow
       </Text>
     </>
@@ -197,7 +247,9 @@ export default function HomeScreen() {
             <PostCard
               post={item}
               onChange={(id, patch) =>
-                setPosts((list) => list.map((p) => (p._id === id ? { ...p, ...patch } : p)))
+                setPosts((list) =>
+                  list.map((p) => (p._id === id ? { ...p, ...patch } : p))
+                )
               }
             />
           )}
@@ -211,7 +263,14 @@ export default function HomeScreen() {
             />
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.electricBlue} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              tintColor={colors.electricBlue}
+            />
           }
           contentContainerStyle={{ paddingBottom: spacing.xxl }}
           showsVerticalScrollIndicator={false}
@@ -223,30 +282,56 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+  },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandMark: {
-    width: 34, height: 34, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  brandText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  brandText: { color: '#fff', fontSize: 18, fontWeight: '900', includeFontPadding: false },
   brandName: { fontSize: 20, fontWeight: '800', letterSpacing: 0.3 },
   rightIcons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   sectionTitle: { fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
   storyAdd: { alignItems: 'center' },
   storyAddCircle: {
-    width: 66, height: 66, borderRadius: 33,
-    borderWidth: 1.5, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   storyItem: { alignItems: 'center' },
   discoverHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingRight: 16, marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 16,
+    marginBottom: 6,
   },
   discoverCard: {
     width: CARD_W + 40,
