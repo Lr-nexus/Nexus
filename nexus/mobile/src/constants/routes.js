@@ -104,6 +104,7 @@ export const ROUTES = {
   ADMIN_USERS: 'AdminUsers',
   ADMIN_REPORTS: 'AdminReports',
   ADMIN_STATS: 'AdminStats',
+  MEDIA_GALLERY: 'MediaGallery',
 };
 
 export default ROUTES;

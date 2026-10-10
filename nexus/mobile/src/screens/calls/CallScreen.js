@@ -24,7 +24,6 @@ export default function CallScreen() {
   );
   const peer = peers[0] || { fullName: 'Unknown' };
 
-  // Derive the participant ID list from params OR conversation
   const targetIds = (participantIds && participantIds.length ? participantIds : peers.map((p) => String(p._id)))
     .filter((id) => id && id !== String(user?.id));
 

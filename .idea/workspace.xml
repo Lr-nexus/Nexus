@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="143d4037-0e41-406a-8eac-14922e2a906f" name="Changes" comment="" />
+    <list default="true" id="143d4037-0e41-406a-8eac-14922e2a906f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/nexus/mobile/src/screens/calls/CallScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/nexus/mobile/src/screens/calls/CallScreen.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,9 +15,12 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
-}]]></component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="3KK5K4WIj2yiOQWqNoQiWcUdHF4" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -29,7 +34,9 @@
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "last_opened_file_path": "C:/Users/USER/Desktop/nexus_app"
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/USER/Desktop/nexus_app",
+    "settings.editor.selected.configurable": "AndroidSdkUpdater"
   }
 }]]></component>
   <component name="TaskManager">

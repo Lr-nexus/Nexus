@@ -14,6 +14,7 @@ export default function ChatStackNavigator() {
       <Stack.Screen name={ROUTES.NEW_CHAT} component={Screens.NewChat} />
       <Stack.Screen name={ROUTES.CHAT_INFO} component={Screens.ChatInfo} />
       <Stack.Screen name={ROUTES.CHAT_SEARCH} component={Screens.ChatSearch} />
+      <Stack.Screen name={ROUTES.MEDIA_GALLERY} component={Screens.MediaGallery} />
       <Stack.Screen name={ROUTES.CHAT_LOCK} component={Screens.ChatLock} options={modalScreenOptions} />
       <Stack.Screen name={ROUTES.CALL} component={Screens.Call} />
       <Stack.Screen name={ROUTES.CALL_HISTORY} component={Screens.CallHistory} />

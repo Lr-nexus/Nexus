@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   Alert, KeyboardAvoidingView, Platform, Keyboard,
@@ -21,13 +21,13 @@ const MODES = {
     title: 'What should I reply?',
     field: 'What they said…',
     placeholder: '"You are actually funny 😂"',
-    call: (input, style) => rizzApi.reply({ message: input, style }),
+    call: (input, style, personality) => rizzApi.reply({ message: input, style, personality }),
   },
   chat: {
     title: 'Ask Rizz AI',
     field: 'What do you need help with?',
     placeholder: 'Help me start a conversation with my crush…',
-    call: (input, style) => rizzApi.chat({ message: input, style }),
+    call: (input, style, personality) => rizzApi.chat({ message: input, style, personality }),
   },
   rewrite: {
     title: 'Rewrite my message',
@@ -67,11 +67,25 @@ export default function RizzChatScreen() {
 
   const [input, setInput] = useState(params.context || '');
   const [style, setStyle] = useState('smooth');
+  const [personality, setPersonality] = useState('confident');
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Load user's default style + personality
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await rizzApi.settings();
+        const s = res.settings || {};
+        if (s.defaultStyle) setStyle(s.defaultStyle);
+        if (s.personality) setPersonality(s.personality);
+      } catch {} finally { setSettingsLoaded(true); }
+    })();
+  }, []);
 
   async function generate() {
     if (!input.trim() && mode !== 'compliment' && mode !== 'starter') {
@@ -81,7 +95,7 @@ export default function RizzChatScreen() {
     setLoading(true);
     setResponses([]);
     try {
-      const res = await cfg.call(input.trim(), style);
+      const res = await cfg.call(input.trim(), style, personality);
       setResponses(res.responses || []);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     } catch (e) {
@@ -133,7 +147,7 @@ export default function RizzChatScreen() {
         </TouchableOpacity>
         <RizzAvatar size={34} pulsing={loading} />
         <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>Rizz AI</Text>
+          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, includeFontPadding: false }}>Rizz AI</Text>
           <Text style={{ color: colors.textMuted, fontSize: 11 }}>{cfg.title}</Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate(ROUTES.RIZZ_HISTORY)} hitSlop={8} style={styles.backBtn}>
@@ -141,7 +155,7 @@ export default function RizzChatScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 40 }}
@@ -157,16 +171,13 @@ export default function RizzChatScreen() {
             multiline
             style={[
               styles.input,
-              {
-                backgroundColor: colors.surface,
-                color: colors.text,
-                borderColor: colors.border,
-                borderRadius: radius.md,
-              },
+              { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, borderRadius: radius.md },
             ]}
           />
 
-          <Text style={[styles.label, { color: colors.textMuted, marginTop: 16 }]}>Vibe</Text>
+          <Text style={[styles.label, { color: colors.textMuted, marginTop: 16 }]}>
+            Vibe {settingsLoaded && style ? `· default: ${style}` : ''}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
             {RIZZ_STYLES.map((s) => (
               <RizzStyleChip
@@ -205,12 +216,9 @@ export default function RizzChatScreen() {
                     key={t}
                     onPress={() => refine(t)}
                     disabled={refining}
-                    style={[
-                      styles.toneChip,
-                      { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.pill },
-                    ]}
+                    style={[styles.toneChip, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.pill }]}
                   >
-                    <Text style={{ color: colors.text, fontWeight: '600', fontSize: 12 }}>
+                    <Text style={{ color: colors.text, fontWeight: '600', fontSize: 12, includeFontPadding: false }}>
                       {refining ? '…' : t}
                     </Text>
                   </TouchableOpacity>
@@ -237,14 +245,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginBottom: 6 },
-  input: {
-    minHeight: 90, padding: 14, borderWidth: 1,
-    textAlignVertical: 'top', fontSize: 15,
-  },
+  label: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginBottom: 6, includeFontPadding: false },
+  input: { minHeight: 90, padding: 14, borderWidth: 1, textAlignVertical: 'top', fontSize: 15 },
   toneChip: { paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1 },
-  regen: {
-    height: 48, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, flexDirection: 'row',
-  },
+  regen: { height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexDirection: 'row' },
 });

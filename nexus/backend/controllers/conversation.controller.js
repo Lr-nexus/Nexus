@@ -43,10 +43,7 @@ exports.create = asyncHandler(async (req, res) => {
     participants: [req.user._id, participantId],
   });
 
-  const populated = await convo.populate(
-    'participants',
-    'fullName username profilePicture lastSeenAt'
-  );
+  const populated = await convo.populate('participants', 'fullName username profilePicture lastSeenAt');
   created(res, { conversation: decorate(populated, onlineSet) });
 });
 
@@ -106,3 +103,62 @@ exports.setLocked = asyncHandler(async (req, res) => {
   await convo.save();
   ok(res, { conversation: convo });
 });
+
+// Returns all messages that have media (image/video/audio/file/location/contact)
+exports.media = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const convo = await Conversation.findById(id);
+  if (!convo || !convo.participants.some((p) => p.equals(req.user._id)))
+    throw new ApiError(403, 'Not allowed.');
+
+  const list = await Message.find({
+    conversationId: id,
+    isDeleted: false,
+    type: { $in: ['image', 'video', 'audio', 'file', 'location', 'contact'] },
+  }).sort({ createdAt: -1 }).limit(300);
+
+  const grouped = {
+    images: list.filter((m) => m.type === 'image'),
+    videos: list.filter((m) => m.type === 'video'),
+    audio: list.filter((m) => m.type === 'audio'),
+    files: list.filter((m) => m.type === 'file'),
+    links: list.filter((m) => m.type === 'location'),
+    contacts: list.filter((m) => m.type === 'contact'),
+  };
+  ok(res, { media: grouped, all: list });
+});
+
+// Called by call.controller when a call ends to insert a "call" bubble
+exports.recordCallMessage = async (conversationId, payload, io) => {
+  try {
+    const msg = await Message.create({
+      conversationId,
+      senderId: payload.senderId,
+      type: 'call',
+      content: payload.status, // 'incoming' | 'outgoing' | 'missed' | 'rejected'
+      media: {
+        name: `${payload.callType}-call`,
+        mimeType: 'call',
+        size: payload.durationSeconds || 0,
+      },
+    });
+    const convo = await Conversation.findById(conversationId);
+    if (convo) {
+      convo.lastMessage = msg._id;
+      convo.lastMessageAt = new Date();
+      await convo.save();
+    }
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit('message:new', msg);
+      if (convo) {
+        convo.participants.forEach((pid) => {
+          io.to(`user:${pid}`).emit('message:new', msg);
+        });
+      }
+    }
+    return msg;
+  } catch (e) {
+    console.error('Failed to record call message:', e.message);
+    return null;
+  }
+};

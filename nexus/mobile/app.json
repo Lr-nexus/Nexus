@@ -33,13 +33,9 @@
     },
     "plugins": [
       "expo-secure-store",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Nova needs access to your photos."
-        }
-      ],
-      "expo-video"
+      ["expo-image-picker", { "photosPermission": "Nova needs access to your photos." }],
+      ["expo-audio", { "microphonePermission": "Nova needs the microphone for voice messages." }],
+      ["expo-local-authentication", { "faceIDPermission": "Allow Nova to use Face ID to secure your chats." }]
     ],
     "extra": {
       "eas": {

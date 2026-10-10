@@ -128,4 +128,5 @@ export const Screens = {
   AdminUsers: safe('AdminUsers', () => require('../screens/admin/AdminUsersScreen')),
   AdminReports: safe('AdminReports', () => require('../screens/admin/AdminReportsScreen')),
   AdminStats: safe('AdminStats', () => require('../screens/admin/AdminStatsScreen')),
+  MediaGallery: safe('MediaGallery', () => require('../screens/chat/MediaGalleryScreen')),
 };

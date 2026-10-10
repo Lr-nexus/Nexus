@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator,
@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { groupsApi } from '../../api/groups.api';
@@ -59,7 +60,9 @@ export default function ChatInfoScreen() {
         }
       }
     } catch {}
-    finally { setLoading(false); }
+    finally {
+      setLoading(false);
+    }
   }, [conversation?._id, isGroup]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -88,7 +91,9 @@ export default function ChatInfoScreen() {
       Alert.alert('Wallpaper set');
     } catch (e) {
       Alert.alert('Could not set wallpaper', e?.response?.data?.message || e.message);
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+    }
   }
 
   function clearWallpaper() {
@@ -117,11 +122,30 @@ export default function ChatInfoScreen() {
       setConversation((c) => ({ ...c, photo: up.url }));
     } catch (e) {
       Alert.alert('Could not update photo', e?.response?.data?.message || 'Try again.');
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function toggleLock() {
     try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      let authed = true;
+
+      if (hasHardware && isEnrolled) {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: conversation.locked ? 'Unlock this chat' : 'Lock this chat',
+          fallbackLabel: 'Use device passcode',
+          disableDeviceFallback: false,
+          cancelLabel: 'Cancel',
+        });
+        authed = result.success;
+      }
+
+      if (!authed) return;
+
       const next = !conversation.locked;
       await conversationsApi.setLocked(conversation._id, next);
       setConversation((c) => ({ ...c, locked: next }));
@@ -167,6 +191,7 @@ export default function ChatInfoScreen() {
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        {/* Hero */}
         <View style={styles.hero}>
           <TouchableOpacity
             onPress={isGroup ? changeGroupPhoto : undefined}
@@ -176,7 +201,12 @@ export default function ChatInfoScreen() {
             <View style={{ position: 'relative' }}>
               <Avatar uri={avatarUser.profilePicture} name={title} size={104} />
               {isGroup ? (
-                <View style={[styles.cameraBadge, { backgroundColor: colors.nexusBlue, borderColor: colors.bg }]}>
+                <View
+                  style={[
+                    styles.cameraBadge,
+                    { backgroundColor: colors.nexusBlue, borderColor: colors.bg },
+                  ]}
+                >
                   {uploading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
@@ -189,10 +219,20 @@ export default function ChatInfoScreen() {
 
           <Text style={[styles.name, { color: colors.text }]}>{title}</Text>
           {!isGroup && others[0]?.username ? (
-            <Text style={{ color: colors.textMuted, marginTop: 4 }}>@{others[0].username}</Text>
+            <Text style={{ color: colors.textMuted, marginTop: 4 }}>
+              @{others[0].username}
+            </Text>
           ) : null}
           {isGroup && group?.description ? (
-            <Text style={{ color: colors.textMuted, marginTop: 10, paddingHorizontal: 24, textAlign: 'center', lineHeight: 20 }}>
+            <Text
+              style={{
+                color: colors.textMuted,
+                marginTop: 10,
+                paddingHorizontal: 24,
+                textAlign: 'center',
+                lineHeight: 20,
+              }}
+            >
               {group.description}
             </Text>
           ) : null}
@@ -205,10 +245,15 @@ export default function ChatInfoScreen() {
           ) : null}
         </View>
 
+        {/* Quick actions row (single mute control) */}
         <View style={styles.actionsRow}>
           <ActionPill icon="call-outline" label="Voice" onPress={() => startCall('audio')} />
           <ActionPill icon="videocam-outline" label="Video" onPress={() => startCall('video')} />
-          <ActionPill icon="search-outline" label="Search" onPress={() => navigation.navigate(ROUTES.CHAT_SEARCH, { conversation })} />
+          <ActionPill
+            icon="search-outline"
+            label="Search"
+            onPress={() => navigation.navigate(ROUTES.CHAT_SEARCH, { conversation })}
+          />
           <ActionPill
             icon={muted ? 'notifications-outline' : 'notifications-off-outline'}
             label={muted ? 'Unmute' : 'Mute'}
@@ -216,19 +261,31 @@ export default function ChatInfoScreen() {
           />
         </View>
 
+        {/* Group members */}
         {isGroup && members.length > 0 ? (
           <Section title={`Members (${members.length})`} colors={colors} spacing={spacing}>
             {members.map((m) => (
               <TouchableOpacity
                 key={m._id}
-                onPress={() => m.userId?._id && navigation.navigate(ROUTES.USER_PROFILE, { userId: m.userId._id })}
+                onPress={() =>
+                  m.userId?._id &&
+                  navigation.navigate(ROUTES.USER_PROFILE, { userId: m.userId._id })
+                }
                 style={styles.memberRow}
                 activeOpacity={0.75}
               >
-                <Avatar uri={m.userId?.profilePicture} name={m.userId?.fullName} size={40} />
+                <Avatar
+                  uri={m.userId?.profilePicture}
+                  name={m.userId?.fullName}
+                  size={40}
+                />
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={{ color: colors.text, fontWeight: '700' }}>{m.userId?.fullName || 'Member'}</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>@{m.userId?.username}</Text>
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>
+                    {m.userId?.fullName || 'Member'}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                    @{m.userId?.username}
+                  </Text>
                 </View>
                 {m.role && m.role !== 'member' ? (
                   <Badge label={m.role.toUpperCase()} variant="primary" size="sm" />
@@ -238,16 +295,19 @@ export default function ChatInfoScreen() {
           </Section>
         ) : null}
 
+        {/* Options (mute removed from here — only in the pills row) */}
         <Section title="Options" colors={colors} spacing={spacing}>
           {isGroup ? (
             <OptionRow
               icon="person-add-outline"
               label="Add members"
               colors={colors}
-              onPress={() => navigation.navigate(ROUTES.ADD_MEMBERS, {
-                groupId: group?._id || conversation._id,
-                existingIds: members.map((m) => String(m.userId?._id)).filter(Boolean),
-              })}
+              onPress={() =>
+                navigation.navigate(ROUTES.ADD_MEMBERS, {
+                  groupId: group?._id || conversation._id,
+                  existingIds: members.map((m) => String(m.userId?._id)).filter(Boolean),
+                })
+              }
             />
           ) : null}
 
@@ -258,19 +318,43 @@ export default function ChatInfoScreen() {
             onPress={toggleLock}
           />
 
-          <OptionRow icon="image-outline" label="Chat wallpaper" colors={colors} onPress={changeWallpaper} />
-          <OptionRow icon="trash-outline" label="Remove wallpaper" colors={colors} onPress={clearWallpaper} />
-          <OptionRow icon="images-outline" label="Media, links, and docs" colors={colors} onPress={() => Alert.alert('Media gallery', 'Coming soon.')} />
           <OptionRow
-            icon={muted ? 'notifications-outline' : 'notifications-off-outline'}
-            label={muted ? 'Unmute notifications' : 'Mute notifications'}
+            icon="images-outline"
+            label="Media, links, and docs"
             colors={colors}
-            onPress={toggleMute}
+            onPress={() => navigation.navigate(ROUTES.MEDIA_GALLERY, { conversation })}
           />
-          <OptionRow icon="flag-outline" label="Report" colors={colors} destructive onPress={() => Alert.alert('Reported')} />
+
+          <OptionRow
+            icon="image-outline"
+            label="Chat wallpaper"
+            colors={colors}
+            onPress={changeWallpaper}
+          />
+
+          <OptionRow
+            icon="trash-outline"
+            label="Remove wallpaper"
+            colors={colors}
+            onPress={clearWallpaper}
+          />
+
+          <OptionRow
+            icon="flag-outline"
+            label="Report"
+            colors={colors}
+            destructive
+            onPress={() => Alert.alert('Reported')}
+          />
 
           {isGroup ? (
-            <OptionRow icon="exit-outline" label="Leave group" colors={colors} destructive onPress={leaveGroup} />
+            <OptionRow
+              icon="exit-outline"
+              label="Leave group"
+              colors={colors}
+              destructive
+              onPress={leaveGroup}
+            />
           ) : null}
         </Section>
       </ScrollView>
@@ -278,10 +362,22 @@ export default function ChatInfoScreen() {
   );
 }
 
+/* ── Sub-components ── */
+
 function Section({ title, children, colors, spacing }) {
   return (
     <View style={{ marginTop: 24 }}>
-      <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 0.6, paddingHorizontal: spacing.md, marginBottom: 8 }}>
+      <Text
+        style={{
+          color: colors.textMuted,
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 0.6,
+          paddingHorizontal: spacing.md,
+          marginBottom: 8,
+          includeFontPadding: false,
+        }}
+      >
         {title.toUpperCase()}
       </Text>
       <View style={{ paddingHorizontal: spacing.md }}>{children}</View>
@@ -294,11 +390,28 @@ function ActionPill({ icon, label, onPress }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.actionPill, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.md }]}
+      style={[
+        styles.actionPill,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderRadius: radius.md,
+        },
+      ]}
       activeOpacity={0.85}
     >
       <Ionicons name={icon} size={22} color={colors.electricBlue} />
-      <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, marginTop: 6 }}>{label}</Text>
+      <Text
+        style={{
+          color: colors.text,
+          fontWeight: '700',
+          fontSize: 12,
+          marginTop: 6,
+          includeFontPadding: false,
+        }}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -306,8 +419,21 @@ function ActionPill({ icon, label, onPress }) {
 function OptionRow({ icon, label, onPress, colors, destructive }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.optionRow} activeOpacity={0.75}>
-      <Ionicons name={icon} size={20} color={destructive ? colors.danger : colors.text} />
-      <Text style={{ color: destructive ? colors.danger : colors.text, fontWeight: '600', fontSize: 14, marginLeft: 14, flex: 1 }}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={destructive ? colors.danger : colors.text}
+      />
+      <Text
+        style={{
+          color: destructive ? colors.danger : colors.text,
+          fontWeight: '600',
+          fontSize: 14,
+          marginLeft: 14,
+          flex: 1,
+          includeFontPadding: false,
+        }}
+      >
         {label}
       </Text>
       <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
@@ -318,14 +444,44 @@ function OptionRow({ icon, label, onPress, colors, destructive }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   hero: { alignItems: 'center', paddingVertical: 24 },
-  name: { fontSize: 22, fontWeight: '800', marginTop: 12 },
-  cameraBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 3,
+  name: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 12,
+    includeFontPadding: false,
   },
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, marginTop: 8 },
-  actionPill: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  actionPill: {
+    width: 78,
+    height: 78,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
 });

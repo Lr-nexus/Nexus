@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Call = require('../models/Call');
 const CallParticipant = require('../models/CallParticipant');
 const Conversation = require('../models/Conversation');
+const conversationCtrl = require('./conversation.controller');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { ok, created } = require('../utils/ApiResponse');
@@ -10,7 +11,6 @@ exports.initiate = asyncHandler(async (req, res) => {
   const { type = 'audio', conversationId = null } = req.body;
   let { participantIds = [] } = req.body;
 
-  // Fallback: if conversationId given, derive participants
   if ((!participantIds || participantIds.length === 0) && conversationId) {
     const convo = await Conversation.findById(conversationId);
     if (convo) {
@@ -20,7 +20,6 @@ exports.initiate = asyncHandler(async (req, res) => {
     }
   }
 
-  // Validate — must be non-empty array of valid ObjectIds, excluding self
   participantIds = (participantIds || [])
     .map((id) => String(id))
     .filter((id) => mongoose.Types.ObjectId.isValid(id))
@@ -60,6 +59,7 @@ exports.initiate = asyncHandler(async (req, res) => {
           profilePicture: req.user.profilePicture,
         },
         type,
+        conversationId,
       });
     }
   }
@@ -89,10 +89,7 @@ exports.answer = asyncHandler(async (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.to(`user:${call.callerId}`).emit(
-      accepted ? 'call:accepted' : 'call:rejected',
-      { callId: call._id }
-    );
+    io.to(`user:${call.callerId}`).emit(accepted ? 'call:accepted' : 'call:rejected', { callId: call._id });
   }
   ok(res, { call });
 });
@@ -111,6 +108,25 @@ exports.end = asyncHandler(async (req, res) => {
   );
 
   const io = req.app.get('io');
+
+  // Insert a call message bubble into the conversation
+  if (call.conversationId) {
+    const status =
+      call.status === 'rejected'
+        ? 'missed'
+        : 'outgoing';
+    await conversationCtrl.recordCallMessage(
+      call.conversationId,
+      {
+        senderId: call.callerId,
+        callType: call.type,
+        status,
+        durationSeconds: call.durationSeconds,
+      },
+      io
+    );
+  }
+
   if (io) io.to(`call:${call._id}`).emit('call:ended', { callId: call._id });
   ok(res, { call });
 });
