@@ -26,9 +26,7 @@ client.interceptors.response.use(
           (async () => {
             const rt = await secureStorage.getItem(TOKEN_KEYS.REFRESH);
             if (!rt) throw new Error('no_refresh');
-            const { data } = await axios.post(`${API_URL}/auth/refresh`, {
-              refreshToken: rt,
-            });
+            const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken: rt });
             await secureStorage.setItem(TOKEN_KEYS.ACCESS, data.accessToken);
             await secureStorage.setItem(TOKEN_KEYS.REFRESH, data.refreshToken);
             return data.accessToken;

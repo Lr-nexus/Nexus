@@ -15,8 +15,8 @@ export function AuthProvider({ children }) {
       try {
         const token = await authStorage.getAccess();
         if (token) {
-          const { user } = await authApi.me();
-          if (!cancelled) setUser(user);
+          const res = await authApi.me();
+          if (!cancelled) setUser(res.user);
         }
       } catch (e) {
         await authStorage.clear();
@@ -25,9 +25,7 @@ export function AuthProvider({ children }) {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const persistSession = useCallback(async ({ accessToken, refreshToken, user }) => {
@@ -36,9 +34,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const { user } = await authApi.me();
-    setUser(user);
-    return user;
+    const res = await authApi.me();
+    setUser(res.user);
+    return res.user;
   }, []);
 
   const logout = useCallback(async () => {

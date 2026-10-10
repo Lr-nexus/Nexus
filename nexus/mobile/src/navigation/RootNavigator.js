@@ -64,7 +64,19 @@ export default function RootNavigator() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontSize: 34, fontWeight: '900', letterSpacing: 8, marginTop: 24 },
-  company: { fontSize: 10, letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
-  tag: { marginTop: 10, fontSize: 13 },
+  brand: {
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: 8,
+    marginTop: 24,
+    includeFontPadding: false,
+  },
+  company: {
+    fontSize: 10,
+    letterSpacing: 3,
+    marginTop: 4,
+    textTransform: 'uppercase',
+    includeFontPadding: false,
+  },
+  tag: { marginTop: 10, fontSize: 13, includeFontPadding: false },
 });

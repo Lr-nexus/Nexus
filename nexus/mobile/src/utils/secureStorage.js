@@ -4,8 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const isWeb = Platform.OS === 'web';
 
-// SecureStore is native-only. On web we fall back to AsyncStorage,
-// which is NOT encrypted — acceptable for local web preview only.
 export const secureStorage = {
   async getItem(key) {
     if (isWeb) return AsyncStorage.getItem(key);
@@ -30,3 +28,10 @@ export const secureStorage = {
     } catch {}
   },
 };
+
+// Compatibility aliases for legacy code that used the old method names
+secureStorage.getItemAsync = secureStorage.getItem;
+secureStorage.setItemAsync = secureStorage.setItem;
+secureStorage.deleteItemAsync = secureStorage.deleteItem;
+secureStorage.deleteValueWithKeyAsync = secureStorage.deleteItem;
+secureStorage.getValueWithKeyAsync = secureStorage.getItem;

@@ -1,19 +1,22 @@
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { TOKEN_KEYS } from '../constants/config';
 
 export const authStorage = {
   async save({ accessToken, refreshToken }) {
-    if (accessToken) await SecureStore.setItemAsync(TOKEN_KEYS.ACCESS, accessToken);
-    if (refreshToken) await SecureStore.setItemAsync(TOKEN_KEYS.REFRESH, refreshToken);
+    if (accessToken) await secureStorage.setItem(TOKEN_KEYS.ACCESS, accessToken);
+    if (refreshToken) await secureStorage.setItem(TOKEN_KEYS.REFRESH, refreshToken);
   },
+
   async getAccess() {
-    return SecureStore.getItemAsync(TOKEN_KEYS.ACCESS);
+    return secureStorage.getItem(TOKEN_KEYS.ACCESS);
   },
+
   async getRefresh() {
-    return SecureStore.getItemAsync(TOKEN_KEYS.REFRESH);
+    return secureStorage.getItem(TOKEN_KEYS.REFRESH);
   },
+
   async clear() {
-    await SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS);
-    await SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH);
+    await secureStorage.deleteItem(TOKEN_KEYS.ACCESS);
+    await secureStorage.deleteItem(TOKEN_KEYS.REFRESH);
   },
 };
