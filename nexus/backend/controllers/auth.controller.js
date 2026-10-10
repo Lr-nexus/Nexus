@@ -272,7 +272,17 @@ exports.logoutAll = asyncHandler(async (req, res) => {
   return ok(res, {}, 'Logged out from all devices.');
 });
 
-exports.me = asyncHandler(async (req, res) => ok(res, { user: publicUser(req.user) }));
+exports.me = asyncHandler(async (req, res) => {
+  const Follow = require('../models/Follow');
+  const [followersCount, followingCount] = await Promise.all([
+    Follow.countDocuments({ followingId: req.user._id }),
+    Follow.countDocuments({ followerId: req.user._id }),
+  ]);
+  const u = publicUser(req.user);
+  u.followersCount = followersCount;
+  u.followingCount = followingCount;
+  ok(res, { user: u });
+});
 
 exports.sessions = asyncHandler(async (req, res) => {
   const list = await Session.find({ userId: req.user._id, revokedAt: null }).sort({ lastActiveAt: -1 });

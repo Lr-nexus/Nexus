@@ -28,19 +28,61 @@ export default function UserProfileScreen() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
+  const [requested, setRequested] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const [u, p] = await Promise.all([
+      const [u, p, fs] = await Promise.all([
         usersApi.get(userId),
         postsApi.byUser(userId, { limit: 30 }),
+        usersApi.followStatus(userId),
       ]);
-      setUser(u.user);
+      setUser({
+        ...u.user,
+        followersCount: fs.followersCount,
+        followingCount: fs.followingCount,
+      });
       setPosts(p.posts || []);
-    } catch {} finally { setLoading(false); }
+      setFollowing(fs.following);
+      setRequested(fs.requested);
+    } catch (e) {
+      Alert.alert('Could not load profile', e?.response?.data?.message || 'Try again.');
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function toggleFollow() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (following) {
+        await usersApi.unfollow(userId);
+        setFollowing(false);
+        setRequested(false);
+        setUser((u) => ({ ...u, followersCount: Math.max(0, (u.followersCount || 0) - 1) }));
+      } else if (requested) {
+        await usersApi.unfollow(userId);
+        setRequested(false);
+      } else {
+        const res = await usersApi.follow(userId);
+        if (res.requested) {
+          setRequested(true);
+        } else {
+          setFollowing(true);
+          setUser((u) => ({ ...u, followersCount: (u.followersCount || 0) + 1 }));
+        }
+      }
+    } catch (e) {
+      Alert.alert('Failed', e?.response?.data?.message || 'Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function message() {
     try {
@@ -74,10 +116,11 @@ export default function UserProfileScreen() {
           <ProfileHeader
             user={user}
             following={following}
+            followRequested={requested}
             postsCount={posts.length}
             followersCount={user?.followersCount || 0}
             followingCount={user?.followingCount || 0}
-            onFollow={() => setFollowing((v) => !v)}
+            onFollow={toggleFollow}
             onMessage={message}
             onFollowers={() => navigation.navigate(ROUTES.FOLLOWERS, { userId })}
             onFollowing={() => navigation.navigate(ROUTES.FOLLOWING, { userId })}

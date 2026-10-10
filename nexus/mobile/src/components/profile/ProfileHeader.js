@@ -67,8 +67,14 @@ export default function ProfileHeader({
         ) : (
           <>
             <Button
-              title={following ? 'Following' : 'Follow'}
-              variant={following ? 'secondary' : 'primary'}
+              title={
+                following
+                  ? 'Following'
+                  : followRequested
+                  ? 'Requested'
+                  : 'Follow'
+              }
+              variant={following || followRequested ? 'secondary' : 'primary'}
               onPress={onFollow}
               fullWidth={false}
               style={{ flex: 1 }}
